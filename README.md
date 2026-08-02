@@ -5,8 +5,8 @@
 
 ## Status
 
-M0、M1、M2 已实现。M2 的真实模型集成测试需要本地 GGUF 文件；CUDA 构建需要
-WSL CUDA Toolkit。
+M0、M1、M2 已完成，并已在 RTX 4060 Laptop GPU 上通过真实 GGUF、全层 CUDA offload
+和连续 20 次生成验收。
 
 ## Requirements
 
@@ -14,7 +14,8 @@ WSL CUDA Toolkit。
 - CMake 3.28+
 - 支持 C++20 的 GCC 或 Clang
 - Git（需初始化 `third_party/llama.cpp` 子模块）
-- 可选：Ninja、ccache、CUDA Toolkit
+- Ninja、ccache
+- GPU 构建：CUDA Toolkit 13.3（Ubuntu 26.04）
 
 ## Bootstrap
 
@@ -41,7 +42,8 @@ cmake --workflow --preset asan
   --prompt "Explain RAII in C++ with a short example."
 ```
 
-配置示例中的模型路径只是占位符。模型下载和校验方式见 [models/README.md](models/README.md)。
+配置示例使用 Qwen2.5-Coder-1.5B-Instruct Q4_K_M。模型下载和校验方式见
+[models/README.md](models/README.md)。
 
 ## Verification
 
@@ -55,6 +57,10 @@ cmake --workflow --preset asan-make
 ```bash
 LLCL_TEST_MODEL=/absolute/path/to/model.gguf \
   ctest --test-dir build/release-cpu-make -L model --output-on-failure
+
+LLCL_TEST_MODEL="$PWD/models/qwen2.5-coder-1.5b-instruct-q4_k_m.gguf" \
+LLCL_TEST_GPU_LAYERS=-1 LLCL_TEST_REPEAT=20 \
+  ctest --test-dir build/release-cuda -L model --output-on-failure
 ```
 
 ## Documentation

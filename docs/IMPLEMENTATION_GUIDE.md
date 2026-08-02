@@ -1,7 +1,7 @@
 # LlamaCodeLab：基于 llama.cpp 的本地 C++ 代码库智能助手完整实现教程
 
 > 面向 C++ 实习作品集的工程化学习路线
-> 目标环境：WSL2、Ubuntu 26.04、C++20、RTX 4060 Laptop 8GB、CUDA 13.1
+> 目标环境：WSL2、Ubuntu 26.04、C++20、RTX 4060 Laptop 8GB、CUDA 13.3
 > 文档基线日期：2026-07-29
 
 ---
@@ -157,7 +157,8 @@ RAM: 11 GiB
 GPU: NVIDIA GeForce RTX 4060 Laptop GPU
 VRAM: 8188 MiB
 Driver: 591.44
-Driver CUDA capability: 13.1
+Driver: 591.44（满足 CUDA 13.x minor-version compatibility）
+CUDA Toolkit: 13.3
 Compiler: GCC 15.2
 CMake: 4.2+
 ```
@@ -170,8 +171,8 @@ CMake: 4.2+
 
 | 用途                 | 模型档位              | 量化   | 初始上下文 |
 | -------------------- | --------------------- | ------ | ---------- |
-| 快速开发和自动化测试 | Llama 3.2 3B Instruct | Q4_K_M | 4096       |
-| 最终演示和质量基线   | Llama 3.1 8B Instruct | Q4_K_M | 4096       |
+| 快速开发和自动化测试 | Qwen2.5-Coder 1.5B Instruct | Q4_K_M | 4096       |
+| 最终演示和质量基线   | 兼容 8GB 显存的 7B Coder Instruct | Q4_K_M | 4096       |
 
 Embedding 使用独立的小模型，不要用聊天模型替代。候选模型必须满足：
 
@@ -261,13 +262,13 @@ sudo apt-get install -y \
   libsqlite3-dev
 ```
 
-最小 CUDA 13.1 开发工具：
+最小 CUDA 13.3 开发工具：
 
 ```bash
 sudo apt-get install -y \
-  cuda-nvcc-13-1 \
-  cuda-cudart-dev-13-1 \
-  libcublas-dev-13-1
+  cuda-nvcc-13-3 \
+  cuda-cudart-dev-13-3 \
+  libcublas-dev-13-3
 ```
 
 验证：
@@ -277,14 +278,14 @@ git --version
 cmake --version
 ninja --version
 clang-format --version
-/usr/local/cuda-13.1/bin/nvcc --version
+/usr/local/cuda-13.3/bin/nvcc --version
 /usr/lib/wsl/lib/nvidia-smi
 ```
 
 如果 `nvcc` 没有进入 `PATH`，在 `~/.bashrc` 加入：
 
 ```bash
-export PATH=/usr/local/cuda-13.1/bin:$PATH
+export PATH=/usr/local/cuda-13.3/bin:$PATH
 ```
 
 重新加载：
@@ -648,7 +649,7 @@ endif()
         "CMAKE_BUILD_TYPE": "Release",
         "LLCL_ENABLE_CUDA": "ON",
         "LLCL_BUILD_BENCHMARKS": "ON",
-        "CMAKE_CUDA_COMPILER": "/usr/local/cuda-13.1/bin/nvcc",
+        "CMAKE_CUDA_COMPILER": "/usr/local/cuda-13.3/bin/nvcc",
         "CMAKE_CUDA_ARCHITECTURES": "89"
       }
     }
@@ -1772,9 +1773,9 @@ echo "saved ${final_path}"
 运行：
 
 ```bash
-MODEL_URL='https://example.invalid/model.gguf' \
-MODEL_FILE='model-q4_k_m.gguf' \
-MODEL_SHA256='<EXPECTED_SHA256>' \
+MODEL_URL='https://huggingface.co/Qwen/Qwen2.5-Coder-1.5B-Instruct-GGUF/resolve/f86cb2c1fa58255f8052cc32aeede1b7482d4361/qwen2.5-coder-1.5b-instruct-q4_k_m.gguf' \
+MODEL_FILE='qwen2.5-coder-1.5b-instruct-q4_k_m.gguf' \
+MODEL_SHA256='cc324af070c2ecbfd324a30884d2f951a7ff756aba85cb811a6ec436933bb046' \
 bash scripts/download_model.sh
 ```
 
@@ -1799,6 +1800,30 @@ bash scripts/download_model.sh
 - Ctrl+C 或 stop request 可以结束生成。
 - 模型路径错误能输出可理解的错误。
 - 连续运行 20 次没有显存持续增长。
+
+本机实际验收结果（2026-08-03）：
+
+- CUDA 13.3 Release 构建识别 RTX 4060 Laptop、compute capability 8.9 和 8188 MiB VRAM。
+- Qwen2.5-Coder-1.5B-Instruct Q4_K_M 的 29/29 层全部 offload。
+- CPU decode 36.67 tok/s；CUDA decode 123.29 tok/s，约为 3.36 倍。
+- CPU TTFT 230 ms；CUDA TTFT 85 ms。
+- 同一模型实例连续生成 20 次全部通过，耗时 3.02 秒；整卡显存在 1596–1609 MiB
+  范围内波动，没有随运行次数递增。
+
+可复现命令：
+
+```bash
+cmake --fresh --preset release-cuda
+cmake --build --preset release-cuda
+./build/release-cuda/apps/cli/llcl-cli devices
+
+LLCL_TEST_MODEL="$PWD/models/qwen2.5-coder-1.5b-instruct-q4_k_m.gguf" \
+LLCL_TEST_GPU_LAYERS=-1 LLCL_TEST_REPEAT=20 \
+  ctest --test-dir build/release-cuda -L model --output-on-failure
+```
+
+Ubuntu 26.04 应使用 CUDA 13.3。CUDA 13.1 会因新 glibc 的 `rsqrt/rsqrtf noexcept`
+声明产生编译错误；不要通过修改系统头文件绕过，而应使用 NVIDIA 已验证该发行版的 Toolkit。
 
 ---
 
