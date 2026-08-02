@@ -1,0 +1,17 @@
+Checks: >
+  -*,
+  bugprone-*,
+  clang-analyzer-*,
+  concurrency-*,
+  modernize-*,
+  performance-*,
+  portability-*,
+  readability-identifier-naming
+WarningsAsErrors: ''
+HeaderFilterRegex: '^(include|src|apps)/'
+FormatStyle: file
+CheckOptions:
+  readability-identifier-naming.ClassCase: CamelCase
+  readability-identifier-naming.StructCase: CamelCase
+  readability-identifier-naming.FunctionCase: lower_case
+  readability-identifier-naming.VariableCase: lower_case

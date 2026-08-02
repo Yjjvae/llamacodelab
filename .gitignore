@@ -1,0 +1,33 @@
+# Build
+/build/
+/build-*/
+/out/
+CMakeUserPresets.json
+compile_commands.json
+
+# Models and generated indexes
+/models/*.gguf
+/models/*.bin
+/var/
+/indexes/
+*.index
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+
+# Runtime
+*.log
+.cache/
+.ccache/
+coverage/
+
+# IDE / OS
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Secrets
+.env
+.env.*
+!.env.example

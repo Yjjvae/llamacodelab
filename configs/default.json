@@ -1,0 +1,23 @@
+{
+  "generation_model": {
+    "path": "models/generation.gguf",
+    "context_size": 4096,
+    "batch_size": 512,
+    "gpu_layers": -1,
+    "flash_attention": true
+  },
+  "embedding_model": {
+    "path": "models/embedding.gguf",
+    "context_size": 2048,
+    "batch_size": 512,
+    "gpu_layers": -1,
+    "flash_attention": true
+  },
+  "index": {
+    "data_dir": "var/index",
+    "chunk_lines": 80,
+    "overlap_lines": 16,
+    "top_k": 8
+  },
+  "log_level": "info"
+}

@@ -1,0 +1,10 @@
+{
+  "generation_model": {
+    "path": "models/generation-q4_k_m.gguf",
+    "context_size": 4096,
+    "batch_size": 512,
+    "gpu_layers": -1,
+    "flash_attention": true
+  },
+  "log_level": "info"
+}

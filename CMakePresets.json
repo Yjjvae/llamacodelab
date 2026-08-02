@@ -1,0 +1,174 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 28,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "CMAKE_CXX_COMPILER_LAUNCHER": "ccache"
+      }
+    },
+    {
+      "name": "make-base",
+      "hidden": true,
+      "generator": "Unix Makefiles",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": {
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "GGML_CCACHE": "OFF"
+      }
+    },
+    {
+      "name": "dev",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "LLCL_BUILD_TESTS": "ON"
+      }
+    },
+    {
+      "name": "dev-make",
+      "inherits": "make-base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "LLCL_BUILD_TESTS": "ON"
+      }
+    },
+    {
+      "name": "asan",
+      "inherits": "dev",
+      "cacheVariables": {
+        "LLCL_ENABLE_SANITIZERS": "ON"
+      }
+    },
+    {
+      "name": "asan-make",
+      "inherits": "dev-make",
+      "cacheVariables": {
+        "LLCL_ENABLE_SANITIZERS": "ON"
+      }
+    },
+    {
+      "name": "release-cpu",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "LLCL_ENABLE_CUDA": "OFF",
+        "LLCL_BUILD_TESTS": "ON"
+      }
+    },
+    {
+      "name": "release-cpu-make",
+      "inherits": "make-base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "LLCL_ENABLE_CUDA": "OFF",
+        "LLCL_BUILD_TESTS": "ON"
+      }
+    },
+    {
+      "name": "release-cuda",
+      "inherits": "base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "LLCL_ENABLE_CUDA": "ON",
+        "LLCL_BUILD_TESTS": "ON",
+        "CMAKE_CUDA_COMPILER": "/usr/local/cuda-13.1/bin/nvcc",
+        "CMAKE_CUDA_ARCHITECTURES": "89"
+      }
+    },
+    {
+      "name": "release-cuda-make",
+      "inherits": "make-base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "LLCL_ENABLE_CUDA": "ON",
+        "LLCL_BUILD_TESTS": "ON",
+        "CMAKE_CUDA_COMPILER": "/usr/local/cuda-13.1/bin/nvcc",
+        "CMAKE_CUDA_ARCHITECTURES": "89"
+      }
+    }
+  ],
+  "buildPresets": [
+    { "name": "dev", "configurePreset": "dev", "jobs": 8 },
+    { "name": "dev-make", "configurePreset": "dev-make", "jobs": 8 },
+    { "name": "asan", "configurePreset": "asan", "jobs": 8 },
+    { "name": "asan-make", "configurePreset": "asan-make", "jobs": 8 },
+    { "name": "release-cpu", "configurePreset": "release-cpu", "jobs": 8 },
+    {
+      "name": "release-cpu-make",
+      "configurePreset": "release-cpu-make",
+      "jobs": 8
+    },
+    { "name": "release-cuda", "configurePreset": "release-cuda", "jobs": 8 },
+    {
+      "name": "release-cuda-make",
+      "configurePreset": "release-cuda-make",
+      "jobs": 8
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "dev",
+      "configurePreset": "dev",
+      "output": { "outputOnFailure": true }
+    },
+    {
+      "name": "dev-make",
+      "configurePreset": "dev-make",
+      "output": { "outputOnFailure": true }
+    },
+    {
+      "name": "asan",
+      "configurePreset": "asan",
+      "output": { "outputOnFailure": true }
+    },
+    {
+      "name": "asan-make",
+      "configurePreset": "asan-make",
+      "output": { "outputOnFailure": true }
+    }
+  ],
+  "workflowPresets": [
+    {
+      "name": "dev",
+      "steps": [
+        { "type": "configure", "name": "dev" },
+        { "type": "build", "name": "dev" },
+        { "type": "test", "name": "dev" }
+      ]
+    },
+    {
+      "name": "dev-make",
+      "steps": [
+        { "type": "configure", "name": "dev-make" },
+        { "type": "build", "name": "dev-make" },
+        { "type": "test", "name": "dev-make" }
+      ]
+    },
+    {
+      "name": "asan",
+      "steps": [
+        { "type": "configure", "name": "asan" },
+        { "type": "build", "name": "asan" },
+        { "type": "test", "name": "asan" }
+      ]
+    },
+    {
+      "name": "asan-make",
+      "steps": [
+        { "type": "configure", "name": "asan-make" },
+        { "type": "build", "name": "asan-make" },
+        { "type": "test", "name": "asan-make" }
+      ]
+    }
+  ]
+}

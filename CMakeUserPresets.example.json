@@ -1,0 +1,13 @@
+{
+  "version": 6,
+  "include": ["CMakePresets.json"],
+  "configurePresets": [
+    {
+      "name": "local-cuda",
+      "inherits": "release-cuda",
+      "cacheVariables": {
+        "CMAKE_CUDA_COMPILER": "/usr/local/cuda/bin/nvcc"
+      }
+    }
+  ]
+}
