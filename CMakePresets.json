@@ -13,7 +13,8 @@
       "binaryDir": "${sourceDir}/build/${presetName}",
       "cacheVariables": {
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
-        "CMAKE_CXX_COMPILER_LAUNCHER": "ccache"
+        "CMAKE_CXX_COMPILER_LAUNCHER": "ccache",
+        "CMAKE_CUDA_COMPILER_LAUNCHER": "ccache"
       }
     },
     {
@@ -81,7 +82,7 @@
         "CMAKE_BUILD_TYPE": "Release",
         "LLCL_ENABLE_CUDA": "ON",
         "LLCL_BUILD_TESTS": "ON",
-        "CMAKE_CUDA_COMPILER": "/usr/local/cuda-13.1/bin/nvcc",
+        "CMAKE_CUDA_COMPILER": "/usr/local/cuda-13.3/bin/nvcc",
         "CMAKE_CUDA_ARCHITECTURES": "89"
       }
     },
@@ -92,7 +93,7 @@
         "CMAKE_BUILD_TYPE": "Release",
         "LLCL_ENABLE_CUDA": "ON",
         "LLCL_BUILD_TESTS": "ON",
-        "CMAKE_CUDA_COMPILER": "/usr/local/cuda-13.1/bin/nvcc",
+        "CMAKE_CUDA_COMPILER": "/usr/local/cuda-13.3/bin/nvcc",
         "CMAKE_CUDA_ARCHITECTURES": "89"
       }
     }

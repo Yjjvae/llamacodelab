@@ -1,6 +1,6 @@
 {
   "generation_model": {
-    "path": "models/generation-q4_k_m.gguf",
+    "path": "models/qwen2.5-coder-1.5b-instruct-q4_k_m.gguf",
     "context_size": 4096,
     "batch_size": 512,
     "gpu_layers": 0,
