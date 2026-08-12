@@ -1,9 +1,8 @@
 #include "llamacodelab/support/config.hpp"
 
-#include <gtest/gtest.h>
-
 #include <filesystem>
 #include <fstream>
+#include <gtest/gtest.h>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -12,34 +11,38 @@ namespace llcl {
 namespace {
 
 class TemporaryConfig {
- public:
+public:
   TemporaryConfig(std::string_view filename, std::string_view content)
       : path_(std::filesystem::path(testing::TempDir()) / filename) {
     std::ofstream output(path_);
     output << content;
   }
 
-  ~TemporaryConfig() { std::filesystem::remove(path_); }
+  ~TemporaryConfig() {
+    std::filesystem::remove(path_);
+  }
 
   TemporaryConfig(const TemporaryConfig&) = delete;
   TemporaryConfig& operator=(const TemporaryConfig&) = delete;
 
-  [[nodiscard]] const std::filesystem::path& path() const { return path_; }
+  [[nodiscard]] const std::filesystem::path& path() const {
+    return path_;
+  }
 
- private:
+private:
   std::filesystem::path path_;
 };
 
 TEST(ConfigTest, LoadsCompleteJson) {
-  TemporaryConfig file(
-      "llcl-complete.json",
-      R"({
+  TemporaryConfig file("llcl-complete.json",
+                       R"({
         "generation_model": {
           "path": "models/generation.gguf",
           "context_size": 8192,
           "batch_size": 256,
           "gpu_layers": 32,
-          "flash_attention": false
+          "flash_attention": false,
+          "chat_template": "chatml"
         },
         "embedding_model": {"path": "models/embedding.gguf"},
         "index": {
@@ -58,14 +61,15 @@ TEST(ConfigTest, LoadsCompleteJson) {
   EXPECT_EQ(config.generation_model.batch_size, 256U);
   EXPECT_EQ(config.generation_model.gpu_layers, 32);
   EXPECT_FALSE(config.generation_model.flash_attention);
+  ASSERT_TRUE(config.generation_model.chat_template.has_value());
+  EXPECT_EQ(*config.generation_model.chat_template, "chatml");
   EXPECT_EQ(config.embedding_model.path, "models/embedding.gguf");
   EXPECT_EQ(config.index.top_k, 12U);
   EXPECT_EQ(config.log_level, "debug");
 }
 
 TEST(ConfigTest, UsesDefaultsForOptionalFields) {
-  TemporaryConfig file(
-      "llcl-defaults.json", R"({"generation_model":{"path":"model.gguf"}})");
+  TemporaryConfig file("llcl-defaults.json", R"({"generation_model":{"path":"model.gguf"}})");
 
   const auto config = load_config(file.path());
 
@@ -82,9 +86,8 @@ TEST(ConfigTest, RejectsMissingModelPath) {
 }
 
 TEST(ConfigTest, RejectsOverlapNotSmallerThanChunkSize) {
-  TemporaryConfig file(
-      "llcl-overlap.json",
-      R"({
+  TemporaryConfig file("llcl-overlap.json",
+                       R"({
         "generation_model":{"path":"model.gguf"},
         "index":{"chunk_lines":32,"overlap_lines":32}
       })");
@@ -104,5 +107,5 @@ TEST(ConfigTest, ParseErrorContainsPathAndByte) {
   }
 }
 
-}  // namespace
-}  // namespace llcl
+} // namespace
+} // namespace llcl

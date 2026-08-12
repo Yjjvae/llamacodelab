@@ -1,10 +1,9 @@
 #include "llamacodelab/support/config.hpp"
 
-#include <nlohmann/json.hpp>
-
 #include <cstdint>
 #include <fstream>
 #include <limits>
+#include <nlohmann/json.hpp>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -14,10 +13,8 @@ namespace {
 
 using Json = nlohmann::json;
 
-[[nodiscard]] std::size_t read_size(
-    const Json& object,
-    std::string_view key,
-    std::size_t fallback) {
+[[nodiscard]] std::size_t read_size(const Json& object, std::string_view key,
+                                    std::size_t fallback) {
   const auto iterator = object.find(key);
   if (iterator == object.end()) {
     return fallback;
@@ -36,10 +33,8 @@ using Json = nlohmann::json;
   return static_cast<std::size_t>(value);
 }
 
-[[nodiscard]] ModelConfig read_model(
-    const Json& root,
-    std::string_view key,
-    const ModelConfig& fallback) {
+[[nodiscard]] ModelConfig read_model(const Json& root, std::string_view key,
+                                     const ModelConfig& fallback) {
   const auto iterator = root.find(key);
   if (iterator == root.end()) {
     return fallback;
@@ -59,6 +54,17 @@ using Json = nlohmann::json;
   result.batch_size = read_size(*iterator, "batch_size", fallback.batch_size);
   result.gpu_layers = iterator->value("gpu_layers", fallback.gpu_layers);
   result.flash_attention = iterator->value("flash_attention", fallback.flash_attention);
+  if (const auto template_value = iterator->find("chat_template");
+      template_value != iterator->end()) {
+    if (!template_value->is_string()) {
+      throw std::invalid_argument(std::string(key) + ".chat_template must be a string");
+    }
+    const auto value = template_value->get<std::string>();
+    if (value.empty()) {
+      throw std::invalid_argument(std::string(key) + ".chat_template must not be empty");
+    }
+    result.chat_template = value;
+  }
   return result;
 }
 
@@ -89,19 +95,17 @@ void validate_model(const ModelConfig& config, std::string_view name) {
     throw std::invalid_argument(std::string(name) + ".path must not be empty");
   }
   if (config.context_size < 128 || config.context_size > 1'048'576) {
-    throw std::invalid_argument(
-        std::string(name) + ".context_size must be in [128, 1048576]");
+    throw std::invalid_argument(std::string(name) + ".context_size must be in [128, 1048576]");
   }
   if (config.batch_size == 0 || config.batch_size > config.context_size) {
-    throw std::invalid_argument(
-        std::string(name) + ".batch_size must be in [1, context_size]");
+    throw std::invalid_argument(std::string(name) + ".batch_size must be in [1, context_size]");
   }
   if (config.gpu_layers < -1 || config.gpu_layers > 999) {
     throw std::invalid_argument(std::string(name) + ".gpu_layers must be in [-1, 999]");
   }
 }
 
-}  // namespace
+} // namespace
 
 AppConfig load_config(const std::filesystem::path& path) {
   std::ifstream input(path);
@@ -113,9 +117,8 @@ AppConfig load_config(const std::filesystem::path& path) {
   try {
     input >> root;
   } catch (const Json::parse_error& error) {
-    throw std::runtime_error(
-        "failed to parse config '" + path.string() + "' at byte " +
-        std::to_string(error.byte) + ": " + error.what());
+    throw std::runtime_error("failed to parse config '" + path.string() + "' at byte " +
+                             std::to_string(error.byte) + ": " + error.what());
   }
 
   if (!root.is_object()) {
@@ -147,12 +150,11 @@ void validate_config(const AppConfig& config) {
   if (config.index.top_k == 0 || config.index.top_k > 1'000) {
     throw std::invalid_argument("index.top_k must be in [1, 1000]");
   }
-  if (config.log_level != "trace" && config.log_level != "debug" &&
-      config.log_level != "info" && config.log_level != "warn" &&
-      config.log_level != "error" && config.log_level != "critical" &&
+  if (config.log_level != "trace" && config.log_level != "debug" && config.log_level != "info" &&
+      config.log_level != "warn" && config.log_level != "error" && config.log_level != "critical" &&
       config.log_level != "off") {
     throw std::invalid_argument("unsupported log_level: " + config.log_level);
   }
 }
 
-}  // namespace llcl
+} // namespace llcl

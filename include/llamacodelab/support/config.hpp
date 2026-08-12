@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <filesystem>
+#include <optional>
 #include <string>
 
 namespace llcl {
@@ -12,6 +13,7 @@ struct ModelConfig {
   std::size_t batch_size{512};
   int gpu_layers{-1};
   bool flash_attention{true};
+  std::optional<std::string> chat_template;
 };
 
 struct IndexConfig {
@@ -31,4 +33,4 @@ struct AppConfig {
 [[nodiscard]] AppConfig load_config(const std::filesystem::path& path);
 void validate_config(const AppConfig& config);
 
-}  // namespace llcl
+} // namespace llcl

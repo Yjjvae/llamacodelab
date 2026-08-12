@@ -299,7 +299,7 @@ source ~/.bashrc
 使用：
 
 ```text
-/home/yjavae/projects/cpp/ai
+/home/yjavae/projects/cpp/llamacodelab
 ```
 
 不要把主要仓库放在 `/mnt/c/...`。WSL 中大量小文件编译、Git 操作和代码索引在 Linux 文件系统通常更稳定、更快。
@@ -1875,6 +1875,21 @@ class IChatFormatter {
 ```
 
 如果模型没有可识别模板，启动时明确失败，并提示用户配置覆盖模板；不要默默套用一个可能错误的 ChatML 模板。
+
+实际实现提供 `generation_model.chat_template` 可选覆盖。例如模型没有 GGUF 模板、但你明确知道
+其格式时，在配置中写入 llama.cpp 支持的模板名：
+
+```json
+{
+  "generation_model": {
+    "chat_template": "chatml"
+  }
+}
+```
+
+项目的 `chat` CLI 可接收可重复的 `--message` 作为历史 user 消息；需要完整的多角色历史时，
+使用可重复的 `--turn role:content`，其输入顺序会被保留。在预留 `max_tokens` 后，
+`PromptBuilder` 固定保留 system 消息，并从最早的非 system 消息开始裁剪至 token 预算内。
 
 ### 13.5 Sampling
 
