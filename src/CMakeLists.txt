@@ -4,7 +4,7 @@ target_include_directories(
   INTERFACE "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>"
 )
 
-add_library(llcl_support STATIC support/config.cpp support/logging.cpp)
+add_library(llcl_support STATIC support/config.cpp support/hash.cpp support/logging.cpp)
 target_include_directories(
   llcl_support
   PUBLIC "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>"
@@ -15,6 +15,22 @@ target_link_libraries(
 )
 llcl_set_project_warnings(llcl_support)
 llcl_enable_sanitizers(llcl_support)
+
+add_library(
+  llcl_ingestion
+  STATIC
+  adapters/filesystem/file_scanner.cpp
+  adapters/filesystem/text_chunker.cpp
+)
+target_include_directories(
+  llcl_ingestion
+  PUBLIC
+    "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>"
+    "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src>"
+)
+target_link_libraries(llcl_ingestion PUBLIC llcl_domain llcl_support)
+llcl_set_project_warnings(llcl_ingestion)
+llcl_enable_sanitizers(llcl_ingestion)
 
 add_library(llcl_application STATIC application/chat_session.cpp application/prompt_builder.cpp)
 target_include_directories(

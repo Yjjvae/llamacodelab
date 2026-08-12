@@ -20,6 +20,7 @@ struct IndexConfig {
   std::filesystem::path data_dir{"var/index"};
   std::size_t chunk_lines{80};
   std::size_t overlap_lines{16};
+  std::size_t max_file_bytes{1024U * 1024U};
   std::size_t top_k{8};
 };
 

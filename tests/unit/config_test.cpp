@@ -49,6 +49,7 @@ TEST(ConfigTest, LoadsCompleteJson) {
           "data_dir": "var/test-index",
           "chunk_lines": 100,
           "overlap_lines": 20,
+          "max_file_bytes": 2048,
           "top_k": 12
         },
         "log_level": "debug"
@@ -64,6 +65,7 @@ TEST(ConfigTest, LoadsCompleteJson) {
   ASSERT_TRUE(config.generation_model.chat_template.has_value());
   EXPECT_EQ(*config.generation_model.chat_template, "chatml");
   EXPECT_EQ(config.embedding_model.path, "models/embedding.gguf");
+  EXPECT_EQ(config.index.max_file_bytes, 2048U);
   EXPECT_EQ(config.index.top_k, 12U);
   EXPECT_EQ(config.log_level, "debug");
 }
@@ -91,6 +93,13 @@ TEST(ConfigTest, RejectsOverlapNotSmallerThanChunkSize) {
         "generation_model":{"path":"model.gguf"},
         "index":{"chunk_lines":32,"overlap_lines":32}
       })");
+  EXPECT_THROW(static_cast<void>(load_config(file.path())), std::invalid_argument);
+}
+
+TEST(ConfigTest, RejectsInvalidMaximumFileSize) {
+  TemporaryConfig file(
+      "llcl-file-size.json",
+      R"({"generation_model":{"path":"model.gguf"},"index":{"max_file_bytes":0}})");
   EXPECT_THROW(static_cast<void>(load_config(file.path())), std::invalid_argument);
 }
 
