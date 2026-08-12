@@ -2052,7 +2052,7 @@ chunker_version
 ### 14.8 CLI
 
 ```bash
-./build/dev/apps/indexer/llcl-index scan \
+./build/dev/apps/cli/llcl-cli scan \
   --repo /path/to/cpp/project \
   --dry-run
 ```
@@ -2075,6 +2075,16 @@ elapsed_ms=138
 - 两次扫描无修改时，Chunk ID 完全一致。
 - 恶意符号链接不能读取仓库外文件。
 - 10,000 个小文件扫描不会无限创建线程。
+
+### 14.10 当前项目实现
+
+`llcl_ingestion` 是独立静态库：`FileScanner` 使用 `weakly_canonical()` 验证候选文件仍在仓库
+根目录内，默认不递归符号链接目录，并拒绝链接到根目录外的文件。它顺序扫描，因此 10,000 个小文件
+不会创建无界线程。
+
+`TextChunker` 将 CRLF 规范化为 LF，使用行窗口和安全的 overlap 前进规则；单行超过字节上限时仍会
+单独产出一个 Chunk 以保证进度。Chunk ID 是相对路径、闭区间行号、内容 FNV-1a hash 和
+`text-v1` 版本的稳定组合，不能使用 `std::hash`。
 
 ---
 

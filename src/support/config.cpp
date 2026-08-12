@@ -86,6 +86,7 @@ using Json = nlohmann::json;
   }
   result.chunk_lines = read_size(*iterator, "chunk_lines", result.chunk_lines);
   result.overlap_lines = read_size(*iterator, "overlap_lines", result.overlap_lines);
+  result.max_file_bytes = read_size(*iterator, "max_file_bytes", result.max_file_bytes);
   result.top_k = read_size(*iterator, "top_k", result.top_k);
   return result;
 }
@@ -146,6 +147,9 @@ void validate_config(const AppConfig& config) {
   }
   if (config.index.overlap_lines >= config.index.chunk_lines) {
     throw std::invalid_argument("index.overlap_lines must be smaller than chunk_lines");
+  }
+  if (config.index.max_file_bytes == 0 || config.index.max_file_bytes > 64U * 1024U * 1024U) {
+    throw std::invalid_argument("index.max_file_bytes must be in [1, 67108864]");
   }
   if (config.index.top_k == 0 || config.index.top_k > 1'000) {
     throw std::invalid_argument("index.top_k must be in [1, 1000]");

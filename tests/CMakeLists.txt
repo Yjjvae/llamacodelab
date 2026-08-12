@@ -6,11 +6,13 @@ add_executable(
   unit/fake_generator_test.cpp
   unit/prompt_builder_test.cpp
   unit/chat_session_test.cpp
+  unit/file_scanner_test.cpp
+  unit/text_chunker_test.cpp
 )
 target_include_directories(llcl_unit_tests PRIVATE "${PROJECT_SOURCE_DIR}/tests")
 target_link_libraries(
   llcl_unit_tests
-  PRIVATE GTest::gtest_main llcl_application llcl_support llcl_domain
+  PRIVATE GTest::gtest_main llcl_application llcl_ingestion llcl_support llcl_domain
 )
 llcl_set_project_warnings(llcl_unit_tests)
 llcl_enable_sanitizers(llcl_unit_tests)

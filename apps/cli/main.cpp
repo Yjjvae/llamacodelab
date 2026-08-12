@@ -1,3 +1,5 @@
+#include "adapters/filesystem/file_scanner.hpp"
+#include "adapters/filesystem/text_chunker.hpp"
 #include "adapters/llama/llama_generator.hpp"
 #include "adapters/llama/llama_runtime.hpp"
 #include "llamacodelab/application/chat_session.hpp"
@@ -13,6 +15,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <exception>
+#include <filesystem>
 #include <iomanip>
 #include <iostream>
 #include <optional>
@@ -78,6 +81,23 @@ int main(int argc, char** argv) {
 
   auto* devices_command = app.add_subcommand("devices", "List llama.cpp backend devices");
 
+  std::filesystem::path scan_repository;
+  std::string scan_config_path = "configs/default.json";
+  std::vector<std::string> scan_include_globs;
+  std::vector<std::string> scan_exclude_globs;
+  bool scan_dry_run = false;
+  auto* scan_command = app.add_subcommand("scan", "Scan and chunk a C/C++ repository");
+  scan_command->add_option("--repo", scan_repository, "Repository root to scan")
+      ->required()
+      ->check(CLI::ExistingDirectory);
+  scan_command->add_option("--config", scan_config_path, "JSON configuration file")
+      ->check(CLI::ExistingFile);
+  scan_command->add_option("--include", scan_include_globs,
+                           "Additional relative-path glob to include; repeatable");
+  scan_command->add_option("--exclude", scan_exclude_globs,
+                           "Relative-path glob to exclude; repeatable");
+  scan_command->add_flag("--dry-run", scan_dry_run, "Scan and report without persistent output");
+
   std::string config_path = "configs/default.json";
   std::string prompt;
   std::int32_t max_tokens = 512;
@@ -138,6 +158,45 @@ int main(int argc, char** argv) {
     if (*devices_command) {
       llcl::llama_adapter::LlamaRuntime runtime;
       print_devices(runtime);
+      return 0;
+    }
+
+    if (*scan_command) {
+      const auto config = llcl::load_config(scan_config_path);
+      llcl::configure_logging(config.log_level);
+      const auto started = std::chrono::steady_clock::now();
+      llcl::filesystem_adapter::FileScanner scanner;
+      const auto scan =
+          scanner.scan(scan_repository, {.max_file_bytes = config.index.max_file_bytes,
+                                         .include_globs = scan_include_globs,
+                                         .exclude_globs = scan_exclude_globs});
+
+      llcl::filesystem_adapter::TextChunker chunker;
+      const llcl::filesystem_adapter::ChunkingOptions chunking{
+          .max_lines = config.index.chunk_lines,
+          .overlap_lines = config.index.overlap_lines,
+      };
+      std::size_t chunks_created = 0;
+      std::size_t bytes_indexed = 0;
+      for (const auto& file : scan.files) {
+        const auto chunks = chunker.chunk_file(file, chunking);
+        chunks_created += chunks.size();
+        for (const auto& chunk : chunks) {
+          bytes_indexed += chunk.content.size();
+        }
+      }
+
+      const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+          std::chrono::steady_clock::now() - started);
+      std::cout << "files_seen=" << scan.stats.files_seen << '\n'
+                << "files_indexable=" << scan.stats.files_indexable << '\n'
+                << "files_skipped=" << scan.stats.files_skipped << '\n'
+                << "chunks_created=" << chunks_created << '\n'
+                << "bytes_indexed=" << bytes_indexed << '\n'
+                << "elapsed_ms=" << elapsed.count() << '\n';
+      if (scan_dry_run) {
+        std::cerr << "dry_run=true\n";
+      }
       return 0;
     }
 

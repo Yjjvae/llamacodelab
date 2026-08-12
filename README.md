@@ -1,12 +1,12 @@
 # LlamaCodeLab
 
-一个基于 llama.cpp 的本地 C++ 代码库智能助手。目前完成到实现教程第 13 章（M3）：
-工程骨架、真实 GGUF 的 CPU/CUDA 流式推理，以及多轮消息、GGUF chat template、采样与取消。
+一个基于 llama.cpp 的本地 C++ 代码库智能助手。目前完成到实现教程第 14 章（M4）：
+工程骨架、真实 GGUF 的 CPU/CUDA 流式推理、多轮消息，以及安全的仓库扫描和稳定代码切块。
 
 ## Status
 
-M0、M1、M2、M3 已完成。M3 使用模型自身 GGUF chat template，不会默默硬编码 ChatML；
-支持多条历史 user 消息、固定 seed、top-k/top-p、repeat penalty 和可取消生成。
+M0、M1、M2、M3、M4 已完成。M4 默认只扫描 C/C++/CMake 文件，遵循 `.gitignore`，
+排除构建和第三方目录，并产生稳定的路径、行号、内容 hash 与 Chunk ID。
 
 ## Requirements
 
@@ -48,6 +48,10 @@ cmake --workflow --preset asan
   --turn "assistant:RAII binds resource lifetime to object lifetime." \
   --turn "user:Give a minimal example." \
   --temperature 0.2 --seed 42
+
+./build/dev/apps/cli/llcl-cli scan \
+  --repo . \
+  --dry-run
 ```
 
 `chat` 会从 GGUF 读取模板，预留生成 token 后按 token 预算丢弃最早的非 system 历史消息。
@@ -55,6 +59,10 @@ cmake --workflow --preset asan
 `--turn role:content`（两种写法不能混用）。
 若模型不含模板，可在对应 `generation_model.chat_template` 中配置 llama.cpp 支持的模板名称
 （例如 `chatml`）。
+
+`scan` 不加载模型；它按 `index.chunk_lines`、`index.overlap_lines` 和
+`index.max_file_bytes` 扫描仓库并报告文件/Chunk 统计。可重复使用 `--include` 与 `--exclude`
+添加或排除相对路径 glob。
 
 配置示例使用 Qwen2.5-Coder-1.5B-Instruct Q4_K_M。模型下载和校验方式见
 [models/README.md](models/README.md)。

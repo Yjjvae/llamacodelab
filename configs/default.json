@@ -17,6 +17,7 @@
     "data_dir": "var/index",
     "chunk_lines": 80,
     "overlap_lines": 16,
+    "max_file_bytes": 1048576,
     "top_k": 8
   },
   "log_level": "info"

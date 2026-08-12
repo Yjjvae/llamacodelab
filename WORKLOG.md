@@ -6,10 +6,10 @@
 ## 当前状态
 
 - 日期：2026-08-12（Asia/Shanghai）
-- 教程进度：第 10–13 章，即 M0、M1、M2、M3
-- 项目版本：`0.3.0`
-- 结论：M0/M1/M2/M3 完成；M3 的消息、模板、采样、取消和历史裁剪均有测试
-- Git：M2 验收 commit `79829a2` 位于本地 `main`，尚待推送；M3 改动尚未提交
+- 教程进度：第 10–14 章，即 M0、M1、M2、M3、M4
+- 项目版本：`0.4.0`（M4 功能分支）
+- 结论：M0–M4 完成；M4 的安全扫描、忽略规则、稳定 Chunk 和 CLI 均有测试
+- Git：M2/M3 已分别通过 PR #1/#2 合并；标签和 Release 为 `v0.2.0`、`v0.3.0`；M4 位于功能分支
 
 | 里程碑 | 状态 | 可验证结果 |
 |---|---|---|
@@ -20,6 +20,7 @@
 | M2 真实模型 | 完成 | 官方 Qwen2.5-Coder 1.5B Q4_K_M；SHA-256 校验和 CPU/GPU 推理通过 |
 | M2 CUDA | 完成 | CUDA 13.3、RTX 4060、29/29 层 offload、20 次连续生成通过 |
 | M3 对话层 | 完成 | GGUF template、历史裁剪、会话状态、采样和真实取消测试通过 |
+| M4 代码摄取 | 完成 | 安全扫描、`.gitignore`、稳定切块、路径/行号/hash 和 `scan --dry-run` |
 
 ## 本次实现范围
 
@@ -255,12 +256,22 @@ LLCL_TEST_GPU_LAYERS=-1 LLCL_TEST_REPEAT=20 \
 
 ## 下一步操作
 
-### 1. 进入 M4
+### 1. 进入 M5
 
-实现文件扫描与稳定的文本代码切块：限定 C/C++/CMake 文件、忽略 build/.git/node_modules 等目录，
-并为每个 chunk 记录路径、行号和内容 hash。随后才进入 embedding、索引和检索模块。
+为 M4 Chunk 加入本地 embedding 和可验证的暴力 Top-K 向量检索；先保留精确线性扫描作为后续近似
+索引的基线。
 
 ## 日期记录
+
+### 2026-08-12 — M4 文件扫描与文本代码切块
+
+- 新增 `llcl_ingestion` 静态库、`Chunk` 领域模型和跨进程稳定的 FNV-1a 64-bit hash。
+- `FileScanner` 仅发现 C/C++/CMake 文件，排除 `.git`、build、third_party、vendor、node_modules 和
+  `.cache`，支持 `.gitignore`、include/exclude glob 与最大文件大小。
+- 对仓库根和候选文件执行 canonical 路径边界检查；不递归符号链接目录，拒绝读取指向根目录外的链接。
+- `TextChunker` 提供按行窗口、overlap、CRLF 规范化、超大单行前进保护，以及稳定路径/行号/内容 hash
+  Chunk ID。
+- 新增 `scan --repo … --dry-run`，对项目自身实测：61 个文件、41 个可索引文件、61 个 Chunk。
 
 ### 2026-08-12 — M3 多轮对话、模板与取消
 
