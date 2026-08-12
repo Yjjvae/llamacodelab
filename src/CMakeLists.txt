@@ -16,10 +16,20 @@ target_link_libraries(
 llcl_set_project_warnings(llcl_support)
 llcl_enable_sanitizers(llcl_support)
 
+add_library(llcl_application STATIC application/chat_session.cpp application/prompt_builder.cpp)
+target_include_directories(
+  llcl_application
+  PUBLIC "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>"
+)
+target_link_libraries(llcl_application PUBLIC llcl_domain)
+llcl_set_project_warnings(llcl_application)
+llcl_enable_sanitizers(llcl_application)
+
 add_library(
   llcl_llama
   STATIC
   adapters/llama/llama_runtime.cpp
+  adapters/llama/llama_chat_template.cpp
   adapters/llama/llama_generator.cpp
 )
 target_include_directories(

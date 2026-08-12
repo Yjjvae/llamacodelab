@@ -5,11 +5,11 @@
 
 ## 当前状态
 
-- 日期：2026-08-03（Asia/Shanghai）
-- 教程进度：第 10–12 章，即 M0、M1、M2
-- 项目版本：`0.2.0`
-- 结论：M0/M1/M2 完成；CPU、CUDA、真实 GGUF 和连续 20 次生成均已验收
-- Git：基线 commit `489b2c9` 已推送 `origin/main`；本次硬件验收改动尚未提交
+- 日期：2026-08-12（Asia/Shanghai）
+- 教程进度：第 10–13 章，即 M0、M1、M2、M3
+- 项目版本：`0.3.0`
+- 结论：M0/M1/M2/M3 完成；M3 的消息、模板、采样、取消和历史裁剪均有测试
+- Git：M2 验收 commit `79829a2` 位于本地 `main`，尚待推送；M3 改动尚未提交
 
 | 里程碑 | 状态 | 可验证结果 |
 |---|---|---|
@@ -19,6 +19,7 @@
 | M2 CPU | 完成 | Debug、Release、ASan/UBSan 均编译；测试通过 |
 | M2 真实模型 | 完成 | 官方 Qwen2.5-Coder 1.5B Q4_K_M；SHA-256 校验和 CPU/GPU 推理通过 |
 | M2 CUDA | 完成 | CUDA 13.3、RTX 4060、29/29 层 offload、20 次连续生成通过 |
+| M3 对话层 | 完成 | GGUF template、历史裁剪、会话状态、采样和真实取消测试通过 |
 
 ## 本次实现范围
 
@@ -68,6 +69,21 @@
 - 缺少模型、无效配置、超出上下文等错误会在边界转换为可读消息。
 - 真实 GGUF 用例带 `model` label；没有 `LLCL_TEST_MODEL` 时跳过而不是失败。
 - 增加带 SHA-256 校验、临时文件和原子改名的模型下载脚本。
+
+### M3：多轮对话、Prompt 模板、Sampling 与取消
+
+完成内容：
+
+- 增加 `Role`、`ChatMessage` 和 `IChatFormatter`，领域层不依赖 llama.cpp。
+- `LlamaChatTemplate` 从 GGUF 元数据取得模板，并调用 `llama_chat_apply_template`；没有模板时
+  明确失败。支持通过 `generation_model.chat_template` 指定 llama.cpp 支持的模板覆盖。
+- 增加 `PromptBuilder`：保留 system 消息，按格式化后的实际 token 数从最早的非 system 历史开始裁剪。
+- 增加 `ChatSession` 状态机：`Idle -> Prefill -> Decoding -> Completed/Cancelled/Failed`，运行期间
+  禁止修改历史；完成后将 assistant 回复追加到会话。
+- 采样链支持 greedy、temperature、top-k、top-p、repeat penalty 与固定 seed。
+- CLI 新增 `chat`：可用重复 `--message` 提供 user 历史，或用保序的 `--turn role:content` 表示完整
+  多角色历史；自动应用模板与 token 预算。`generate` 同样支持 top-k 和 repeat penalty。
+- 每个生成请求记录 request id、模型、prompt token 数、TTFT、输出 token 数和结束原因。
 
 ## 固定依赖
 
@@ -231,21 +247,32 @@ LLCL_TEST_GPU_LAYERS=-1 LLCL_TEST_REPEAT=20 \
 
 ## 已知限制
 
-1. M2 只实现单轮原始 prompt；聊天模板和多轮消息属于第 13 章 M3。
-2. `LlamaGenerator` 用 mutex 将生成串行化；并发队列和 context pool 属于后续里程碑。
-3. stop token 在每次 decode 之间检查；一次正在执行的 GPU kernel 不会被强行中断。
-4. M2 拒绝 encoder-decoder 模型，当前目标是 decoder-only 代码模型。
-5. M2 CLI 不自动套用 GGUF chat template；语义验收使用显式 ChatML，自动模板属于 M3。
-6. `nvidia-smi` 在 WSL 中报告整卡占用，包含 Windows 桌面和其他进程，不能当作项目独占显存。
+1. `chat` CLI 的历史只存在于一次命令调用；服务端持久会话、并发队列和 context pool 属于后续里程碑。
+2. stop token 在每次 decode 之间检查；一次正在执行的 GPU kernel 不会被强行中断。
+3. 当前只接受 llama.cpp 能识别的 GGUF 模板或其内置模板名称，不执行任意 Jinja。
+4. 当前目标是 decoder-only 代码模型；embedding、检索和代码索引属于下一阶段。
+5. `nvidia-smi` 在 WSL 中报告整卡占用，包含 Windows 桌面和其他进程，不能当作项目独占显存。
 
 ## 下一步操作
 
-### 1. 进入 M3
+### 1. 进入 M4
 
-实现 GGUF chat template、多轮消息结构和会话状态，让使用者不需要手写 ChatML。随后再进入
-检索、embedding 和索引模块。保留当前 Qwen 1.5B 作为快速回归模型；更大模型只作为质量基线。
+实现文件扫描与稳定的文本代码切块：限定 C/C++/CMake 文件、忽略 build/.git/node_modules 等目录，
+并为每个 chunk 记录路径、行号和内容 hash。随后才进入 embedding、索引和检索模块。
 
 ## 日期记录
+
+### 2026-08-12 — M3 多轮对话、模板与取消
+
+- 增加聊天领域模型、PromptBuilder、ChatSession 状态机和 llama.cpp 模板适配器。
+- 从 Qwen GGUF 读取模板并用 `llama_chat_apply_template` 格式化，真实模型模板测试通过。
+- 实现 system 固定保留、最早非 system 历史优先裁剪的明确 token 预算策略。
+- 增加 top-k、repeat penalty、固定 seed；真实模型固定 seed 两次输出一致。
+- 真实模型在首次 token callback 请求取消，测试确认返回耗时小于 500 ms。
+- 重命名后的工作目录重新生成 CUDA 构建目录；最终 `ctest --test-dir build/release-cuda` 的 16 项测试
+  全部通过，其中 4 项使用真实模型，耗时 3.70 秒。
+- 在 RTX 4060 Laptop GPU 上以 `chat --turn role:content` 跑完整多角色历史：GGUF 模板生效，
+  29/29 层卸载到 GPU，54 prompt tokens，TTFT 78 ms，decode 134.76 tok/s。
 
 ### 2026-08-03 — M2 GPU 与真实推理验收
 

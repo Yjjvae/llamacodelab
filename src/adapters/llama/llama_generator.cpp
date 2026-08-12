@@ -1,18 +1,19 @@
 #include "adapters/llama/llama_generator.hpp"
 
+#include "adapters/llama/llama_chat_template.hpp"
 #include "llamacodelab/support/logging.hpp"
 
-#include <llama.h>
-#include <spdlog/spdlog.h>
-
 #include <algorithm>
+#include <atomic>
 #include <chrono>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
 #include <limits>
+#include <llama.h>
 #include <mutex>
+#include <spdlog/spdlog.h>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -66,12 +67,10 @@ using SamplerPtr = std::unique_ptr<llama_sampler, SamplerDeleter>;
   return static_cast<std::int32_t>(value);
 }
 
-[[nodiscard]] std::vector<llama_token> tokenize(
-    const llama_vocab* vocabulary,
-    std::string_view text) {
+[[nodiscard]] std::vector<llama_token> tokenize(const llama_vocab* vocabulary,
+                                                std::string_view text) {
   const auto text_size = checked_i32(text.size(), "text size");
-  const auto required = llama_tokenize(
-      vocabulary, text.data(), text_size, nullptr, 0, true, true);
+  const auto required = llama_tokenize(vocabulary, text.data(), text_size, nullptr, 0, true, true);
   if (required == 0) {
     return {};
   }
@@ -80,14 +79,8 @@ using SamplerPtr = std::unique_ptr<llama_sampler, SamplerDeleter>;
   }
 
   std::vector<llama_token> result(static_cast<std::size_t>(-required));
-  const auto count = llama_tokenize(
-      vocabulary,
-      text.data(),
-      text_size,
-      result.data(),
-      static_cast<std::int32_t>(result.size()),
-      true,
-      true);
+  const auto count = llama_tokenize(vocabulary, text.data(), text_size, result.data(),
+                                    static_cast<std::int32_t>(result.size()), true, true);
   if (count < 0) {
     throw std::runtime_error("failed to tokenize input text");
   }
@@ -97,12 +90,12 @@ using SamplerPtr = std::unique_ptr<llama_sampler, SamplerDeleter>;
 
 [[nodiscard]] std::string token_piece(const llama_vocab* vocabulary, llama_token token) {
   std::vector<char> buffer(256);
-  auto size = llama_token_to_piece(
-      vocabulary, token, buffer.data(), static_cast<std::int32_t>(buffer.size()), 0, true);
+  auto size = llama_token_to_piece(vocabulary, token, buffer.data(),
+                                   static_cast<std::int32_t>(buffer.size()), 0, true);
   if (size < 0) {
     buffer.resize(static_cast<std::size_t>(-size));
-    size = llama_token_to_piece(
-        vocabulary, token, buffer.data(), static_cast<std::int32_t>(buffer.size()), 0, true);
+    size = llama_token_to_piece(vocabulary, token, buffer.data(),
+                                static_cast<std::int32_t>(buffer.size()), 0, true);
   }
   if (size < 0) {
     throw std::runtime_error("failed to convert generated token to text");
@@ -110,7 +103,9 @@ using SamplerPtr = std::unique_ptr<llama_sampler, SamplerDeleter>;
   return {buffer.data(), static_cast<std::size_t>(size)};
 }
 
-[[nodiscard]] bool is_continuation(unsigned char byte) { return (byte & 0xC0U) == 0x80U; }
+[[nodiscard]] bool is_continuation(unsigned char byte) {
+  return (byte & 0xC0U) == 0x80U;
+}
 
 void emit_complete_utf8(std::string& pending, const TokenCallback& callback, bool final) {
   std::string output;
@@ -176,17 +171,18 @@ void emit_complete_utf8(std::string& pending, const TokenCallback& callback, boo
   return seconds > 0.0 ? static_cast<double>(tokens) / seconds : 0.0;
 }
 
-}  // namespace
+} // namespace
 
 class LlamaGenerator::Impl {
- public:
+public:
   Impl(LlamaRuntime& runtime_value, ModelConfig config_value)
       : runtime(runtime_value), config(std::move(config_value)) {
     if (config.path.empty()) {
       throw std::invalid_argument("model path must not be empty");
     }
     if (!std::filesystem::is_regular_file(config.path)) {
-      throw std::runtime_error("GGUF model does not exist or is not a file: " + config.path.string());
+      throw std::runtime_error("GGUF model does not exist or is not a file: " +
+                               config.path.string());
     }
 
     const auto load_started = Clock::now();
@@ -205,27 +201,25 @@ class LlamaGenerator::Impl {
     if (llama_model_has_encoder(model.get())) {
       throw std::runtime_error("encoder-decoder models are not supported in M2");
     }
+    chat_template = std::make_unique<LlamaChatTemplate>(model.get(), config.chat_template);
 
     const auto trained_context = llama_model_n_ctx_train(model.get());
     if (trained_context > 0 && config.context_size > static_cast<std::size_t>(trained_context)) {
-      throw std::invalid_argument(
-          "configured context_size exceeds model training context: " +
-          std::to_string(config.context_size) + " > " + std::to_string(trained_context));
+      throw std::invalid_argument("configured context_size exceeds model training context: " +
+                                  std::to_string(config.context_size) + " > " +
+                                  std::to_string(trained_context));
     }
 
     std::vector<char> description_buffer(512);
-    const auto description_size = llama_model_desc(
-        model.get(), description_buffer.data(), description_buffer.size());
+    const auto description_size =
+        llama_model_desc(model.get(), description_buffer.data(), description_buffer.size());
     if (description_size > 0) {
       description.assign(description_buffer.data());
     } else {
       description = config.path.filename().string();
     }
-    logger()->info(
-        "loaded model '{}' in {} ms (gpu_layers={})",
-        description,
-        load_time.count(),
-        config.gpu_layers);
+    logger()->info("loaded model '{}' in {} ms (gpu_layers={})", description, load_time.count(),
+                   config.gpu_layers);
   }
 
   LlamaRuntime& runtime;
@@ -234,7 +228,9 @@ class LlamaGenerator::Impl {
   const llama_vocab* vocabulary{};
   std::string description;
   std::chrono::milliseconds load_time{};
+  std::unique_ptr<LlamaChatTemplate> chat_template;
   std::mutex generation_mutex;
+  std::atomic<std::uint64_t> next_request_id{1};
 };
 
 LlamaGenerator::LlamaGenerator(LlamaRuntime& runtime, ModelConfig config)
@@ -247,11 +243,9 @@ std::size_t LlamaGenerator::count_tokens(std::string_view text) const {
   return tokenize(impl_->vocabulary, text).size();
 }
 
-GenerationStats LlamaGenerator::generate(
-    std::string_view prompt,
-    const GenerationOptions& options,
-    const TokenCallback& on_token,
-    std::stop_token stop_token) {
+GenerationStats LlamaGenerator::generate(std::string_view prompt, const GenerationOptions& options,
+                                         const TokenCallback& on_token,
+                                         std::stop_token stop_token) {
   std::scoped_lock lock(impl_->generation_mutex);
   if (prompt.empty()) {
     throw std::invalid_argument("prompt must not be empty");
@@ -268,6 +262,14 @@ GenerationStats LlamaGenerator::generate(
   if (!std::isfinite(options.top_p) || options.top_p <= 0.0F || options.top_p > 1.0F) {
     throw std::invalid_argument("top_p must be in (0, 1]");
   }
+  if (options.top_k < 0) {
+    throw std::invalid_argument("top_k must not be negative");
+  }
+  if (!std::isfinite(options.repeat_penalty) || options.repeat_penalty <= 0.0F) {
+    throw std::invalid_argument("repeat_penalty must be finite and positive");
+  }
+
+  const auto request_id = impl_->next_request_id.fetch_add(1, std::memory_order_relaxed);
 
   const auto started = Clock::now();
   const auto prompt_tokens = tokenize(impl_->vocabulary, prompt);
@@ -275,9 +277,9 @@ GenerationStats LlamaGenerator::generate(
     throw std::runtime_error("prompt tokenization produced no tokens");
   }
   if (prompt_tokens.size() >= impl_->config.context_size) {
-    throw std::invalid_argument(
-        "prompt needs " + std::to_string(prompt_tokens.size()) +
-        " tokens but context_size is " + std::to_string(impl_->config.context_size));
+    throw std::invalid_argument("prompt needs " + std::to_string(prompt_tokens.size()) +
+                                " tokens but context_size is " +
+                                std::to_string(impl_->config.context_size));
   }
 
   auto context_parameters = llama_context_default_params();
@@ -285,8 +287,8 @@ GenerationStats LlamaGenerator::generate(
   context_parameters.n_batch = checked_u32(impl_->config.batch_size, "batch_size");
   context_parameters.n_ubatch = context_parameters.n_batch;
   context_parameters.flash_attn_type = impl_->config.flash_attention
-      ? LLAMA_FLASH_ATTN_TYPE_ENABLED
-      : LLAMA_FLASH_ATTN_TYPE_DISABLED;
+                                           ? LLAMA_FLASH_ATTN_TYPE_ENABLED
+                                           : LLAMA_FLASH_ATTN_TYPE_DISABLED;
   context_parameters.no_perf = false;
 
   ContextPtr context(llama_init_from_model(impl_->model.get(), context_parameters));
@@ -303,7 +305,10 @@ GenerationStats LlamaGenerator::generate(
   if (options.temperature == 0.0F) {
     llama_sampler_chain_add(sampler.get(), llama_sampler_init_greedy());
   } else {
+    llama_sampler_chain_add(sampler.get(), llama_sampler_init_top_k(options.top_k));
     llama_sampler_chain_add(sampler.get(), llama_sampler_init_top_p(options.top_p, 1));
+    llama_sampler_chain_add(sampler.get(),
+                            llama_sampler_init_penalties(-1, options.repeat_penalty, 0.0F, 0.0F));
     llama_sampler_chain_add(sampler.get(), llama_sampler_init_temp(options.temperature));
     llama_sampler_chain_add(sampler.get(), llama_sampler_init_dist(options.seed));
   }
@@ -315,13 +320,12 @@ GenerationStats LlamaGenerator::generate(
       return {};
     }
     const auto count = std::min(impl_->config.batch_size, prompt_tokens.size() - offset);
-    auto batch = llama_batch_get_one(
-        const_cast<llama_token*>(prompt_tokens.data() + offset),
-        static_cast<std::int32_t>(count));
+    auto batch = llama_batch_get_one(const_cast<llama_token*>(prompt_tokens.data() + offset),
+                                     static_cast<std::int32_t>(count));
     const auto decode_result = llama_decode(context.get(), batch);
     if (decode_result != 0) {
-      throw std::runtime_error(
-          "llama prompt decode failed with code " + std::to_string(decode_result));
+      throw std::runtime_error("llama prompt decode failed with code " +
+                               std::to_string(decode_result));
     }
     offset += count;
   }
@@ -338,13 +342,16 @@ GenerationStats LlamaGenerator::generate(
   std::string pending_utf8;
   Clock::time_point first_token_time{};
 
+  std::string finish_reason = "max_tokens";
   for (std::size_t generated = 0; generated < token_limit; ++generated) {
     if (stop_token.stop_requested()) {
+      finish_reason = "cancelled";
       break;
     }
 
     const auto token = llama_sampler_sample(sampler.get(), context.get(), -1);
     if (llama_vocab_is_eog(impl_->vocabulary, token)) {
+      finish_reason = "end_of_generation";
       break;
     }
 
@@ -363,8 +370,8 @@ GenerationStats LlamaGenerator::generate(
       auto batch = llama_batch_get_one(&mutable_token, 1);
       const auto decode_result = llama_decode(context.get(), batch);
       if (decode_result != 0) {
-        throw std::runtime_error(
-            "llama token decode failed with code " + std::to_string(decode_result));
+        throw std::runtime_error("llama token decode failed with code " +
+                                 std::to_string(decode_result));
       }
     }
   }
@@ -374,7 +381,30 @@ GenerationStats LlamaGenerator::generate(
     stats.decode_tokens_per_second =
         tokens_per_second(stats.generated_tokens, Clock::now() - prefill_finished);
   }
+  logger()->info(
+      "request_id={} model='{}' prompt_tokens={} generated_tokens={} ttft_ms={} finish_reason={}",
+      request_id, impl_->description, stats.prompt_tokens, stats.generated_tokens,
+      stats.time_to_first_token.count(), finish_reason);
   return stats;
+}
+
+std::string LlamaGenerator::format_chat(const std::span<const ChatMessage> messages,
+                                        const bool add_assistant_prefix) const {
+  return format(messages, add_assistant_prefix);
+}
+
+std::string LlamaGenerator::format(const std::span<const ChatMessage> messages,
+                                   const bool add_assistant_prefix) const {
+  std::scoped_lock lock(impl_->generation_mutex);
+  return impl_->chat_template->format(messages, add_assistant_prefix);
+}
+
+GenerationStats LlamaGenerator::generate_chat(const std::span<const ChatMessage> messages,
+                                              const GenerationOptions& options,
+                                              const TokenCallback& on_token,
+                                              const std::stop_token stop_token) {
+  const auto prompt = format_chat(messages, true);
+  return generate(prompt, options, on_token, stop_token);
 }
 
 const std::string& LlamaGenerator::model_description() const noexcept {
@@ -385,4 +415,4 @@ std::chrono::milliseconds LlamaGenerator::model_load_time() const noexcept {
   return impl_->load_time;
 }
 
-}  // namespace llcl::llama_adapter
+} // namespace llcl::llama_adapter

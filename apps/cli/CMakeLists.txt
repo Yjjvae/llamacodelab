@@ -6,6 +6,7 @@ target_link_libraries(
   llcl-cli
   PRIVATE
     CLI11::CLI11
+    llcl_application
     llcl_llama
     llcl_support
 )
