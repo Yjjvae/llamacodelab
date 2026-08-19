@@ -6,9 +6,9 @@
 ## 当前状态
 
 - 日期：2026-08-19（Asia/Shanghai）
-- 教程进度：第 10–15 章，即 M0–M5
-- 项目版本：`0.5.0`（M5 待发布）
-- 结论：M5 的 embedding 接口、批处理、归一化、暴力向量检索和真实模型适配器均已实现并测试
+- 教程进度：第 10–16 章，即 M0–M6
+- 项目版本：`0.6.0`（M6 待发布）
+- 结论：M6 已把检索、token 预算提示词、流式生成和结构化引用接入 `ask` CLI
 - Git：M2/M3/M4 已分别通过 PR #1/#2/#3 合并；标签和 Release 为 `v0.2.0`、`v0.3.0`、`v0.4.0`
 
 | 里程碑 | 状态 | 可验证结果 |
@@ -22,6 +22,7 @@
 | M3 对话层 | 完成 | GGUF template、历史裁剪、会话状态、采样和真实取消测试通过 |
 | M4 代码摄取 | 完成 | 安全扫描、`.gitignore`、稳定切块、路径/行号/hash 和 `scan --dry-run` |
 | M5 向量检索 | 完成 | GGUF embedding、批量编码、余弦 Top-K、ground-truth fixture 与基准 |
+| M6 RAG 问答 | 完成 | 上下文预算、提示词防注入、引用校验和 `ask` CLI |
 
 ## 本次实现范围
 
@@ -273,6 +274,17 @@ LLCL_TEST_GPU_LAYERS=-1 LLCL_TEST_REPEAT=20 \
 - 新增 Nomic 模型下载/校验说明、ground-truth 检索 fixture、模型 smoke test 和可选检索微基准。
 - 本机验证：37 项测试通过或按模型环境跳过；已有 Qwen GGUF 验证 embedding 适配器的真实加载、批量编码、
   重复向量稳定性、归一化和索引检索路径。Nomic 专用语义 fixture 通过 `LLCL_TEST_EMBEDDING_MODEL` 启用。
+
+### 2026-08-19 — M6 完整 RAG、引用与上下文预算
+
+- 新增 `AskService` 与内存 Chunk repository；它负责 query embedding、Top-K、缺失 Chunk 过滤、提示词构造、
+  流式生成和引用结果。
+- `ContextBudget` 用生成模型的真实 tokenizer 计数，预留输出与安全余量；高分 Chunk 按顺序保留，过大的
+  Chunk 会跳过而不挤占输出预算。
+- RAG 系统提示明确将代码内容当作不可信数据、限制回答范围并要求仓库事实引用 `[S#]`。
+- 新增 `ask --config --repo [--top-k] [--max-tokens] question`，在一次调用内扫描、切块、embedding 与检索，
+  然后打印引用文件和行号。
+- 单元验证覆盖提示词预算、超大 Chunk、引用和端到端 service 编排；本机 31 项非模型测试通过。
 
 ### 2026-08-19 — chore/quality-gates
 

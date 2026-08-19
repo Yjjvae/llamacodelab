@@ -36,6 +36,7 @@ add_library(
   llcl_retrieval
   STATIC
   adapters/vector/brute_force_index.cpp
+  adapters/memory/in_memory_chunk_repository.cpp
 )
 target_include_directories(
   llcl_retrieval
@@ -47,7 +48,14 @@ target_link_libraries(llcl_retrieval PUBLIC llcl_domain)
 llcl_set_project_warnings(llcl_retrieval)
 llcl_enable_sanitizers(llcl_retrieval)
 
-add_library(llcl_application STATIC application/chat_session.cpp application/prompt_builder.cpp)
+add_library(
+  llcl_application
+  STATIC
+  application/chat_session.cpp
+  application/prompt_builder.cpp
+  application/context_budget.cpp
+  application/ask_service.cpp
+)
 target_include_directories(
   llcl_application
   PUBLIC "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>"

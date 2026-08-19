@@ -1,8 +1,13 @@
 #include "adapters/filesystem/file_scanner.hpp"
 #include "adapters/filesystem/text_chunker.hpp"
+#include "adapters/llama/llama_embedder.hpp"
 #include "adapters/llama/llama_generator.hpp"
 #include "adapters/llama/llama_runtime.hpp"
+#include "adapters/memory/in_memory_chunk_repository.hpp"
+#include "adapters/vector/brute_force_index.hpp"
+#include "llamacodelab/application/ask_service.hpp"
 #include "llamacodelab/application/chat_session.hpp"
+#include "llamacodelab/application/context_budget.hpp"
 #include "llamacodelab/application/prompt_builder.hpp"
 #include "llamacodelab/domain/chat.hpp"
 #include "llamacodelab/domain/generation.hpp"
@@ -18,6 +23,7 @@
 #include <filesystem>
 #include <iomanip>
 #include <iostream>
+#include <iterator>
 #include <optional>
 #include <spdlog/spdlog.h>
 #include <stdexcept>
@@ -97,6 +103,23 @@ int main(int argc, char** argv) {
   scan_command->add_option("--exclude", scan_exclude_globs,
                            "Relative-path glob to exclude; repeatable");
   scan_command->add_flag("--dry-run", scan_dry_run, "Scan and report without persistent output");
+
+  std::filesystem::path ask_repository;
+  std::string ask_config_path = "configs/default.json";
+  std::string ask_question;
+  std::size_t ask_top_k = 0;
+  std::int32_t ask_max_tokens = 512;
+  auto* ask_command = app.add_subcommand("ask", "Answer a question from a C/C++ repository");
+  ask_command->add_option("--repo", ask_repository, "Repository root to index in memory")
+      ->required()
+      ->check(CLI::ExistingDirectory);
+  ask_command->add_option("--config", ask_config_path, "JSON configuration file")
+      ->check(CLI::ExistingFile);
+  ask_command->add_option("--top-k", ask_top_k, "Retrieved chunks (defaults to index.top_k)")
+      ->check(CLI::PositiveNumber);
+  ask_command->add_option("--max-tokens", ask_max_tokens, "Maximum generated tokens")
+      ->check(CLI::PositiveNumber);
+  ask_command->add_option("question", ask_question, "Question to answer")->required();
 
   std::string config_path = "configs/default.json";
   std::string prompt;
@@ -200,7 +223,9 @@ int main(int argc, char** argv) {
       return 0;
     }
 
-    const auto active_config_path = *chat_command ? chat_config_path : config_path;
+    const auto active_config_path = *ask_command    ? ask_config_path
+                                    : *chat_command ? chat_config_path
+                                                    : config_path;
     const auto config = llcl::load_config(active_config_path);
     llcl::configure_logging(config.log_level);
     llcl::llama_adapter::LlamaRuntime runtime;
@@ -217,6 +242,64 @@ int main(int argc, char** argv) {
         generation_stop.request_stop();
       }
     });
+
+    if (*ask_command) {
+      if (ask_max_tokens >= static_cast<std::int32_t>(config.generation_model.context_size)) {
+        throw std::invalid_argument("ask max_tokens must be smaller than context_size");
+      }
+      const auto scan = llcl::filesystem_adapter::FileScanner{}.scan(
+          ask_repository, {.max_file_bytes = config.index.max_file_bytes,
+                           .include_globs = {},
+                           .exclude_globs = {}});
+      const llcl::filesystem_adapter::ChunkingOptions chunking{
+          .max_lines = config.index.chunk_lines, .overlap_lines = config.index.overlap_lines};
+      std::vector<llcl::Chunk> chunks;
+      for (const auto& file : scan.files) {
+        auto file_chunks = llcl::filesystem_adapter::TextChunker{}.chunk_file(file, chunking);
+        chunks.insert(chunks.end(), std::make_move_iterator(file_chunks.begin()),
+                      std::make_move_iterator(file_chunks.end()));
+      }
+      if (chunks.empty()) {
+        throw std::runtime_error("no indexable code chunks found in repository");
+      }
+      llcl::llama_adapter::LlamaEmbedder embedder(runtime, config.embedding_model);
+      std::vector<std::string_view> documents;
+      documents.reserve(chunks.size());
+      for (const auto& chunk : chunks) {
+        documents.push_back(chunk.content);
+      }
+      const auto vectors = embedder.embed_batch(documents, llcl::EmbeddingKind::document);
+      llcl::vector_adapter::BruteForceIndex index(embedder.dimension());
+      for (std::size_t i = 0; i < chunks.size(); ++i) {
+        index.upsert(chunks[i].id, vectors[i]);
+      }
+      llcl::memory_adapter::InMemoryChunkRepository repository;
+      repository.replace(std::move(chunks));
+      llcl::ContextBudget context_budget;
+      const llcl::RagPromptBudget budget{
+          .model_context = config.generation_model.context_size,
+          .reserved_output_tokens = static_cast<std::size_t>(ask_max_tokens),
+          .safety_margin_tokens = 128,
+      };
+      llcl::AskService service(embedder, index, repository, context_budget, generator,
+                               {.max_tokens = ask_max_tokens}, budget);
+      std::string response;
+      const auto result = service.ask(
+          ask_question, ask_top_k == 0 ? config.index.top_k : ask_top_k,
+          [&response](std::string_view token) {
+            response.append(token);
+            std::cout << token;
+            std::cout.flush();
+          },
+          generation_stop.get_token());
+      std::cout << "\n\nSources:\n";
+      for (const auto& citation : result.citations) {
+        std::cout << '[' << citation.source_id << "] " << citation.source.path.generic_string()
+                  << ':' << citation.source.start_line << '-' << citation.source.end_line << '\n';
+      }
+      interrupt_bridge.request_stop();
+      return result.citations_valid ? 0 : 2;
+    }
 
     llcl::GenerationOptions options;
     std::string generation_prompt;

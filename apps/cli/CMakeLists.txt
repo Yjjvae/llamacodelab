@@ -8,6 +8,7 @@ target_link_libraries(
     CLI11::CLI11
     llcl_application
     llcl_ingestion
+    llcl_retrieval
     llcl_llama
     llcl_support
 )

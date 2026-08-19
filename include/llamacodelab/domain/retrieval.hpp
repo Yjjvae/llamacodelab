@@ -43,4 +43,10 @@ public:
   [[nodiscard]] virtual std::size_t dimension() const noexcept = 0;
 };
 
+class IChunkRepository {
+public:
+  virtual ~IChunkRepository() = default;
+  [[nodiscard]] virtual std::vector<Chunk> get_many(std::span<const ChunkId> ids) const = 0;
+};
+
 } // namespace llcl
