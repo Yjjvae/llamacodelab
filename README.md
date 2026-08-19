@@ -1,12 +1,12 @@
 # LlamaCodeLab
 
-一个基于 llama.cpp 的本地 C++ 代码库智能助手。目前完成到实现教程第 14 章（M4）：
-工程骨架、真实 GGUF 的 CPU/CUDA 流式推理、多轮消息，以及安全的仓库扫描和稳定代码切块。
+一个基于 llama.cpp 的本地 C++ 代码库智能助手。目前完成到 M5：
+工程骨架、真实 GGUF 的 CPU/CUDA 流式推理、多轮消息、安全的仓库扫描、稳定代码切块和本地向量检索。
 
 ## Status
 
-M0、M1、M2、M3、M4 已完成。M4 默认只扫描 C/C++/CMake 文件，遵循 `.gitignore`，
-排除构建和第三方目录，并产生稳定的路径、行号、内容 hash 与 Chunk ID。
+M0–M5 已完成。检索层使用独立的 GGUF embedding 模型、Nomic 的 query/document 前缀、L2
+归一化和确定性的暴力 Top-K（相同分数按 Chunk ID 排序）。它是后续近似索引的正确性基线。
 
 ## Requirements
 
@@ -87,6 +87,17 @@ LLCL_TEST_MODEL=/absolute/path/to/model.gguf \
 LLCL_TEST_MODEL="$PWD/models/qwen2.5-coder-1.5b-instruct-q4_k_m.gguf" \
 LLCL_TEST_GPU_LAYERS=-1 LLCL_TEST_REPEAT=20 \
   ctest --test-dir build/release-cuda -L model --output-on-failure
+
+LLCL_TEST_EMBEDDING_MODEL="$PWD/models/nomic-embed-text-v1.5-q4_k_m.gguf" \
+  ctest --test-dir build/dev -R EmbeddingSmokeTest --output-on-failure
+```
+
+可选的检索微基准：
+
+```bash
+cmake -S . -B build/bench -G Ninja -DLLCL_BUILD_BENCHMARKS=ON
+cmake --build build/bench --target llcl_retrieval_benchmark
+./build/bench/benchmarks/llcl_retrieval_benchmark
 ```
 
 ## Documentation

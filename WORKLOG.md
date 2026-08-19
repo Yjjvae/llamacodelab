@@ -6,9 +6,9 @@
 ## 当前状态
 
 - 日期：2026-08-19（Asia/Shanghai）
-- 教程进度：第 10–14 章，即 M0、M1、M2、M3、M4
-- 项目版本：`0.4.0`（M4 已发布）
-- 结论：M0–M4 完成；M4 的安全扫描、忽略规则、稳定 Chunk 和 CLI 均有测试
+- 教程进度：第 10–15 章，即 M0–M5
+- 项目版本：`0.5.0`（M5 待发布）
+- 结论：M5 的 embedding 接口、批处理、归一化、暴力向量检索和真实模型适配器均已实现并测试
 - Git：M2/M3/M4 已分别通过 PR #1/#2/#3 合并；标签和 Release 为 `v0.2.0`、`v0.3.0`、`v0.4.0`
 
 | 里程碑 | 状态 | 可验证结果 |
@@ -21,6 +21,7 @@
 | M2 CUDA | 完成 | CUDA 13.3、RTX 4060、29/29 层 offload、20 次连续生成通过 |
 | M3 对话层 | 完成 | GGUF template、历史裁剪、会话状态、采样和真实取消测试通过 |
 | M4 代码摄取 | 完成 | 安全扫描、`.gitignore`、稳定切块、路径/行号/hash 和 `scan --dry-run` |
+| M5 向量检索 | 完成 | GGUF embedding、批量编码、余弦 Top-K、ground-truth fixture 与基准 |
 
 ## 本次实现范围
 
@@ -251,17 +252,27 @@ LLCL_TEST_GPU_LAYERS=-1 LLCL_TEST_REPEAT=20 \
 1. `chat` CLI 的历史只存在于一次命令调用；服务端持久会话、并发队列和 context pool 属于后续里程碑。
 2. stop token 在每次 decode 之间检查；一次正在执行的 GPU kernel 不会被强行中断。
 3. 当前只接受 llama.cpp 能识别的 GGUF 模板或其内置模板名称，不执行任意 Jinja。
-4. 当前目标是 decoder-only 代码模型；embedding、检索和代码索引属于下一阶段。
+4. 当前索引仅保存在内存；增量索引、持久化和近似搜索属于后续里程碑。
 5. `nvidia-smi` 在 WSL 中报告整卡占用，包含 Windows 桌面和其他进程，不能当作项目独占显存。
 
 ## 下一步操作
 
-### 1. 进入 M5
+### 1. 进入 M6
 
-为 M4 Chunk 加入本地 embedding 和可验证的暴力 Top-K 向量检索；先保留精确线性扫描作为后续近似
-索引的基线。
+把检索结果按真实 tokenizer 的预算组装为带引用的 RAG prompt，并提供 `ask` CLI。
 
 ## 日期记录
+
+### 2026-08-19 — M5 Embedding 与向量检索
+
+- 新增 `IEmbedder`、`IVectorIndex`、embedding 种类和相似度领域函数；所有向量会检查有限性并 L2
+  归一化。
+- 新增 llama.cpp embedding 适配器：模型常驻、query/document 前缀分离，按 token 总量切分批次并用独立
+  sequence 编码，不在领域层暴露 llama.cpp 类型。
+- 新增确定性 `BruteForceIndex`：支持 upsert、erase、维度检查和 Top-K；分数相同以 Chunk ID 升序打破平局。
+- 新增 Nomic 模型下载/校验说明、ground-truth 检索 fixture、模型 smoke test 和可选检索微基准。
+- 本机验证：37 项测试通过或按模型环境跳过；已有 Qwen GGUF 验证 embedding 适配器的真实加载、批量编码、
+  重复向量稳定性、归一化和索引检索路径。Nomic 专用语义 fixture 通过 `LLCL_TEST_EMBEDDING_MODEL` 启用。
 
 ### 2026-08-19 — chore/quality-gates
 
