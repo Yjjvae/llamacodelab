@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.28)
 
 project(
   LlamaCodeLab
-  VERSION 0.4.0
+  VERSION 0.5.0
   DESCRIPTION "Local C++ codebase assistant powered by llama.cpp"
   LANGUAGES C CXX
 )
@@ -55,5 +55,5 @@ if(LLCL_BUILD_TESTS)
 endif()
 
 if(LLCL_BUILD_BENCHMARKS)
-  message(STATUS "Benchmarks start at tutorial milestone M11")
+  add_subdirectory(benchmarks)
 endif()

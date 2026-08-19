@@ -1,7 +1,7 @@
-add_library(llcl_domain INTERFACE)
+add_library(llcl_domain STATIC domain/similarity.cpp)
 target_include_directories(
   llcl_domain
-  INTERFACE "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>"
+  PUBLIC "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>"
 )
 
 add_library(llcl_support STATIC support/config.cpp support/hash.cpp support/logging.cpp)
@@ -32,6 +32,21 @@ target_link_libraries(llcl_ingestion PUBLIC llcl_domain llcl_support)
 llcl_set_project_warnings(llcl_ingestion)
 llcl_enable_sanitizers(llcl_ingestion)
 
+add_library(
+  llcl_retrieval
+  STATIC
+  adapters/vector/brute_force_index.cpp
+)
+target_include_directories(
+  llcl_retrieval
+  PUBLIC
+    "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>"
+  PRIVATE "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src>"
+)
+target_link_libraries(llcl_retrieval PUBLIC llcl_domain)
+llcl_set_project_warnings(llcl_retrieval)
+llcl_enable_sanitizers(llcl_retrieval)
+
 add_library(llcl_application STATIC application/chat_session.cpp application/prompt_builder.cpp)
 target_include_directories(
   llcl_application
@@ -47,6 +62,7 @@ add_library(
   adapters/llama/llama_runtime.cpp
   adapters/llama/llama_chat_template.cpp
   adapters/llama/llama_generator.cpp
+  adapters/llama/llama_embedder.cpp
 )
 target_include_directories(
   llcl_llama

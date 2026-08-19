@@ -1,0 +1,4 @@
+add_executable(llcl_retrieval_benchmark bench_retrieval.cpp)
+target_link_libraries(llcl_retrieval_benchmark PRIVATE llcl_retrieval llcl_domain)
+target_include_directories(llcl_retrieval_benchmark PRIVATE "${PROJECT_SOURCE_DIR}/src")
+llcl_set_project_warnings(llcl_retrieval_benchmark)
