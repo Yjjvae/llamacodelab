@@ -1,0 +1,7 @@
+# Keep text diffs deterministic across Windows, WSL, and Linux.
+* text=auto eol=lf
+
+# These files are binary when they are intentionally tracked in the future.
+*.gguf binary
+*.bin binary
+*.sqlite binary

@@ -11,6 +11,9 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+# The project does not use C++ Modules. Disabling CMake's dependency scanner keeps
+# compile_commands.json consumable by clang-tidy when the build compiler is GCC.
+set(CMAKE_CXX_SCAN_FOR_MODULES OFF)
 
 option(LLCL_BUILD_TESTS "Build tests" ON)
 option(LLCL_BUILD_MODEL_TESTS "Build tests that can load a real GGUF model" ON)

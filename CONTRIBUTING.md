@@ -71,12 +71,16 @@ BREAKING CHANGE: callers must construct SourceRange with 1-based inclusive lines
 
 ## Build and test
 
-Run formatting and the CPU test suite before opening a PR:
+Run the local quality gate before opening a PR. It checks formatting, configures and builds the
+selected preset, runs its tests, then runs `clang-tidy` for project `.cpp` files:
 
 ```bash
-cmake --build --preset dev
-ctest --test-dir build/dev --output-on-failure
+./scripts/quality.sh --preset dev
 ```
+
+Use `./scripts/format.sh` to apply formatting, or `./scripts/format.sh --check` in a non-mutating
+check. After changing compiler flags or a preset, run `cmake --preset dev` before
+`./scripts/tidy.sh dev` so that its compilation database is fresh.
 
 For changes that affect CUDA, llama.cpp integration, or the CLI executable, also build the CUDA
 Release preset. Run model-labelled tests only after setting `LLCL_TEST_MODEL` to a local GGUF.

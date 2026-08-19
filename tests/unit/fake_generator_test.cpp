@@ -1,7 +1,6 @@
 #include "test_doubles/fake_generator.hpp"
 
 #include <gtest/gtest.h>
-
 #include <stop_token>
 #include <string>
 
@@ -30,14 +29,12 @@ TEST(FakeGeneratorTest, HonorsPreRequestedStop) {
   std::string output;
 
   const auto stats = generator.generate(
-      "question",
-      {},
-      [&output](std::string_view token) { output.append(token); },
+      "question", {}, [&output](std::string_view token) { output.append(token); },
       stop_source.get_token());
 
   EXPECT_TRUE(output.empty());
   EXPECT_EQ(stats.generated_tokens, 0U);
 }
 
-}  // namespace
-}  // namespace llcl::test
+} // namespace
+} // namespace llcl::test

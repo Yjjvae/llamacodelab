@@ -1,9 +1,8 @@
 #include "adapters/llama/llama_runtime.hpp"
 
+#include <cstddef>
 #include <ggml-backend.h>
 #include <llama.h>
-
-#include <cstddef>
 
 namespace llcl::llama_adapter {
 
@@ -12,7 +11,9 @@ LlamaRuntime::LlamaRuntime() {
   llama_backend_init();
 }
 
-LlamaRuntime::~LlamaRuntime() { llama_backend_free(); }
+LlamaRuntime::~LlamaRuntime() {
+  llama_backend_free();
+}
 
 std::vector<BackendDevice> LlamaRuntime::devices() const {
   std::vector<BackendDevice> result;
@@ -38,4 +39,4 @@ bool LlamaRuntime::supports_gpu_offload() const noexcept {
   return llama_supports_gpu_offload();
 }
 
-}  // namespace llcl::llama_adapter
+} // namespace llcl::llama_adapter

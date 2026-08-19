@@ -207,7 +207,7 @@ FileScanResult FileScanner::scan(const std::filesystem::path& repository_root,
   const std::filesystem::recursive_directory_iterator end;
   while (!error && iterator != end) {
     const auto entry = *iterator;
-    const auto entry_path = entry.path();
+    const auto& entry_path = entry.path();
     std::error_code entry_error;
     const auto symlink = entry.is_symlink(entry_error);
     const auto directory = entry.is_directory(entry_error);
