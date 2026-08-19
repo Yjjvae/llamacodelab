@@ -10,6 +10,8 @@ add_executable(
   unit/text_chunker_test.cpp
   unit/similarity_test.cpp
   unit/brute_force_index_test.cpp
+  unit/context_budget_test.cpp
+  unit/ask_service_test.cpp
 )
 target_include_directories(llcl_unit_tests PRIVATE "${PROJECT_SOURCE_DIR}/tests")
 target_link_libraries(

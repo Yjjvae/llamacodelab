@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.28)
 
 project(
   LlamaCodeLab
-  VERSION 0.5.0
+  VERSION 0.6.0
   DESCRIPTION "Local C++ codebase assistant powered by llama.cpp"
   LANGUAGES C CXX
 )
