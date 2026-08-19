@@ -5,11 +5,11 @@
 
 ## 当前状态
 
-- 日期：2026-08-12（Asia/Shanghai）
+- 日期：2026-08-19（Asia/Shanghai）
 - 教程进度：第 10–14 章，即 M0、M1、M2、M3、M4
-- 项目版本：`0.4.0`（M4 功能分支）
+- 项目版本：`0.4.0`（M4 已发布）
 - 结论：M0–M4 完成；M4 的安全扫描、忽略规则、稳定 Chunk 和 CLI 均有测试
-- Git：M2/M3 已分别通过 PR #1/#2 合并；标签和 Release 为 `v0.2.0`、`v0.3.0`；M4 位于功能分支
+- Git：M2/M3/M4 已分别通过 PR #1/#2/#3 合并；标签和 Release 为 `v0.2.0`、`v0.3.0`、`v0.4.0`
 
 | 里程碑 | 状态 | 可验证结果 |
 |---|---|---|
@@ -262,6 +262,19 @@ LLCL_TEST_GPU_LAYERS=-1 LLCL_TEST_REPEAT=20 \
 索引的基线。
 
 ## 日期记录
+
+### 2026-08-19 — chore/quality-gates
+
+- 修正项目源码的 clang-format 基线，并将 `scripts/format.sh --check` 设为非破坏性验证入口。
+- 增加 `scripts/quality.sh --preset dev`：依次执行格式检查、CMake 配置/构建、CTest 和 clang-tidy。
+- 增加并行 `scripts/tidy.sh`；仅检查项目生产源码，使用可在 GCC 构建数据库上工作的标准库路径，并将已验证的
+  analyzer、use-after-move 和不必要复制诊断视为错误。
+- 关闭未使用的 C++ Modules 依赖扫描，保证 GCC 的 `compile_commands.json` 可被 clang-tidy 使用。
+- 新增 GitHub Actions CI：PR 和 `main` 自动检查 format、GCC/Clang 构建测试、ASan/UBSan 和 clang-tidy；
+  不下载模型也不运行 GPU E2E。
+- 新增 `.gitattributes` 固定文本文件为 LF，并更新贡献指南、README 和 M4 的实际 PR/Release 记录。
+- 本机验证：`./scripts/quality.sh --preset dev` 通过；`ctest --preset asan --output-on-failure` 通过 23 项，
+  4 项需要本地 GGUF 的 model 测试按设计跳过。
 
 ### 2026-08-12 — M4 文件扫描与文本代码切块
 

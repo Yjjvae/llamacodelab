@@ -12,4 +12,4 @@ namespace llcl {
 void configure_logging(std::string_view level);
 [[nodiscard]] std::shared_ptr<spdlog::logger> logger();
 
-}  // namespace llcl
+} // namespace llcl

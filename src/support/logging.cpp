@@ -1,9 +1,8 @@
 #include "llamacodelab/support/logging.hpp"
 
+#include <mutex>
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/spdlog.h>
-
-#include <mutex>
 #include <stdexcept>
 #include <string>
 
@@ -20,7 +19,7 @@ void ensure_logger() {
   });
 }
 
-}  // namespace
+} // namespace
 
 void configure_logging(std::string_view level) {
   ensure_logger();
@@ -36,4 +35,4 @@ std::shared_ptr<spdlog::logger> logger() {
   return spdlog::get("llamacodelab");
 }
 
-}  // namespace llcl
+} // namespace llcl

@@ -70,9 +70,13 @@ cmake --workflow --preset asan
 ## Verification
 
 ```bash
-cmake --workflow --preset dev-make
+./scripts/quality.sh --preset dev
 cmake --workflow --preset asan-make
 ```
+
+The quality script verifies format, build, unit tests, and `clang-tidy`. GitHub Actions repeats
+the non-GPU checks for pull requests and `main`; GPU/model validation remains an explicit local
+or trusted self-hosted-runner step.
 
 设置真实模型后运行集成测试：
 

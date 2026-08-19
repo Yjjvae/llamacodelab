@@ -15,7 +15,7 @@ struct BackendDevice {
 };
 
 class LlamaRuntime {
- public:
+public:
   LlamaRuntime();
   ~LlamaRuntime();
 
@@ -28,4 +28,4 @@ class LlamaRuntime {
   [[nodiscard]] bool supports_gpu_offload() const noexcept;
 };
 
-}  // namespace llcl::llama_adapter
+} // namespace llcl::llama_adapter

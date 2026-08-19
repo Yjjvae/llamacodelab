@@ -1,17 +1,12 @@
 Checks: >
   -*,
-  bugprone-*,
-  clang-analyzer-*,
-  concurrency-*,
-  modernize-*,
-  performance-*,
-  portability-*,
-  readability-identifier-naming
-WarningsAsErrors: ''
+  clang-analyzer-core.*,
+  clang-analyzer-cplusplus.*,
+  clang-analyzer-deadcode.*,
+  clang-analyzer-nullability.*,
+  bugprone-use-after-move,
+  performance-move-const-arg,
+  performance-unnecessary-copy-initialization
+WarningsAsErrors: '*'
 HeaderFilterRegex: '^(include|src|apps)/'
 FormatStyle: file
-CheckOptions:
-  readability-identifier-naming.ClassCase: CamelCase
-  readability-identifier-naming.StructCase: CamelCase
-  readability-identifier-naming.FunctionCase: lower_case
-  readability-identifier-naming.VariableCase: lower_case
