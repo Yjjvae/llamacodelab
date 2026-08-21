@@ -132,8 +132,21 @@ public:
       if (context == nullptr) {
         throw std::runtime_error("failed to create embedding context");
       }
-      BatchPtr batch(new llama_batch(llama_batch_init(static_cast<std::int32_t>(token_count), 0,
-                                                      static_cast<std::int32_t>(last - first))));
+      const auto allocated_batch = llama_batch_init(static_cast<std::int32_t>(token_count), 0,
+                                                    static_cast<std::int32_t>(last - first));
+      BatchPtr batch(new llama_batch{
+          .n_tokens = 0,
+          .token = allocated_batch.token,
+          .embd = allocated_batch.embd,
+          .pos = allocated_batch.pos,
+          .n_seq_id = allocated_batch.n_seq_id,
+          .seq_id = allocated_batch.seq_id,
+          .logits = allocated_batch.logits,
+      });
+      if (batch->token == nullptr || batch->pos == nullptr || batch->n_seq_id == nullptr ||
+          batch->seq_id == nullptr || batch->logits == nullptr) {
+        throw std::runtime_error("failed to allocate embedding batch");
+      }
       std::size_t batch_index = 0;
       for (std::size_t sequence = first; sequence < last; ++sequence) {
         for (std::size_t position = 0; position < token_lists[sequence].size(); ++position) {
