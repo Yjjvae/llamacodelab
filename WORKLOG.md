@@ -118,6 +118,13 @@
   JSON chat 与 SSE。受当前沙箱限制，监听回环端口的测试以本机授权运行方式执行。
 - 交付：PR #13 合并至 `main`；五项 GitHub Actions 检查全部通过；标签与 Release 为 `v0.8.0`。
 
+### 2026-08-22 — CI 触发优化
+
+- 原 CI 会对任意 PR 完整运行 format、双编译器构建测试、ASan/UBSan 和 clang-tidy；因此纯 Markdown
+  Worklog 更新也会消耗完整 C++ 矩阵。
+- `ci.yml` 现对纯 `*.md`、`docs/**` 或 `LICENSE` 变更使用 `paths-ignore`。代码、CMake、依赖、脚本、
+  测试和 GitHub Actions 本身仍会触发完整 CI；文档专用检查可在后续引入 markdownlint 时独立添加。
+
 ## 固定依赖
 
 | 依赖 | 版本/commit | 归档 SHA-256 |
