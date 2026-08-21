@@ -1,6 +1,7 @@
 #include "llamacodelab/application/ask_service.hpp"
 #include "test_doubles/fake_generator.hpp"
 
+#include <algorithm>
 #include <gtest/gtest.h>
 #include <unordered_map>
 
@@ -35,6 +36,21 @@ public:
   }
 };
 
+class FakeReranker final : public IReranker {
+public:
+  std::size_t candidate_count{};
+  [[nodiscard]] std::vector<SearchHit> rerank(std::string_view,
+                                              const std::span<const SearchHit> candidates,
+                                              std::span<const Chunk>,
+                                              const std::size_t top_k) override {
+    candidate_count = candidates.size();
+    std::vector<SearchHit> result(candidates.begin(), candidates.end());
+    std::reverse(result.begin(), result.end());
+    result.resize(std::min(top_k, result.size()));
+    return result;
+  }
+};
+
 } // namespace
 
 TEST(AskServiceTest, ConnectsQuestionRetrievalContextGenerationAndCitations) {
@@ -55,6 +71,26 @@ TEST(AskServiceTest, ConnectsQuestionRetrievalContextGenerationAndCitations) {
   ASSERT_EQ(result.citations.size(), 2U);
   EXPECT_EQ(result.citations[0].source_id, "S1");
   EXPECT_TRUE(result.citations_valid);
+}
+
+TEST(AskServiceTest, ReranksExpandedCandidatesBeforeBuildingContext) {
+  FakeRetriever retriever;
+  FakeRepository repository;
+  FakeReranker reranker;
+  ContextBudget context_budget;
+  FakeGenerator generator;
+  generator.response = "Answer [S1].";
+  AskService service(
+      retriever, repository, context_budget, generator, {.max_tokens = 32},
+      {.model_context = 4096, .reserved_output_tokens = 32, .safety_margin_tokens = 16},
+      {.reranker = &reranker, .rerank_candidates = 30});
+
+  const auto result = service.ask("Where is the pool?", 1, [](std::string_view) {}, {});
+
+  EXPECT_EQ(retriever.last_top_k, 30U);
+  EXPECT_EQ(reranker.candidate_count, 2U);
+  ASSERT_EQ(result.citations.size(), 1U);
+  EXPECT_EQ(result.citations.front().source.path, "include/pool.hpp");
 }
 
 } // namespace llcl::test

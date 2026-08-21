@@ -22,6 +22,10 @@ struct IndexConfig {
   std::size_t overlap_lines{16};
   std::size_t max_file_bytes{1024U * 1024U};
   std::size_t top_k{8};
+  bool hnsw_enabled{false};
+  std::size_t hnsw_ef_search{256};
+  bool reranker_enabled{false};
+  std::size_t rerank_candidates{30};
 };
 
 struct AppConfig {

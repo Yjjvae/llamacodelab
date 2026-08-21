@@ -16,16 +16,25 @@ namespace {
 
 AskService::AskService(const IRetriever& retriever, IChunkRepository& chunks,
                        ContextBudget& context_budget, ITextGenerator& generator,
-                       GenerationOptions options, RagPromptBudget budget)
+                       GenerationOptions options, RagPromptBudget budget,
+                       AskRetrievalOptions retrieval_options)
     : retriever_(retriever), chunks_(chunks), context_budget_(context_budget),
-      generator_(generator), options_(options), budget_(budget) {}
+      generator_(generator), options_(options), budget_(budget),
+      retrieval_options_(retrieval_options) {
+  if (retrieval_options_.rerank_candidates < 20 || retrieval_options_.rerank_candidates > 50) {
+    throw std::invalid_argument("rerank candidate count must be in [20, 50]");
+  }
+}
 
 AskResult AskService::ask(const std::string_view question, const std::size_t top_k,
                           const TokenCallback& on_token, const std::stop_token stop_token) {
   if (question.empty() || top_k == 0 || !on_token) {
     throw std::invalid_argument("question, top_k, and token callback must be provided");
   }
-  const auto hits = retriever_.retrieve(question, top_k);
+  auto hits =
+      retriever_.retrieve(question, retrieval_options_.reranker == nullptr
+                                        ? top_k
+                                        : std::max(top_k, retrieval_options_.rerank_candidates));
   if (hits.empty()) {
     throw std::runtime_error("no repository context matched the question");
   }
@@ -35,6 +44,9 @@ AskResult AskService::ask(const std::string_view question, const std::size_t top
     ids.push_back(hit.chunk_id);
   }
   const auto chunks = chunks_.get_many(ids);
+  if (retrieval_options_.reranker != nullptr) {
+    hits = retrieval_options_.reranker->rerank(question, hits, chunks, top_k);
+  }
   std::unordered_map<ChunkId, Chunk> by_id;
   by_id.reserve(chunks.size());
   for (const auto& chunk : chunks) {

@@ -50,7 +50,11 @@ TEST(ConfigTest, LoadsCompleteJson) {
           "chunk_lines": 100,
           "overlap_lines": 20,
           "max_file_bytes": 2048,
-          "top_k": 12
+          "top_k": 12,
+          "hnsw_enabled": true,
+          "hnsw_ef_search": 128,
+          "reranker_enabled": true,
+          "rerank_candidates": 24
         },
         "log_level": "debug"
       })");
@@ -67,6 +71,10 @@ TEST(ConfigTest, LoadsCompleteJson) {
   EXPECT_EQ(config.embedding_model.path, "models/embedding.gguf");
   EXPECT_EQ(config.index.max_file_bytes, 2048U);
   EXPECT_EQ(config.index.top_k, 12U);
+  EXPECT_TRUE(config.index.hnsw_enabled);
+  EXPECT_EQ(config.index.hnsw_ef_search, 128U);
+  EXPECT_TRUE(config.index.reranker_enabled);
+  EXPECT_EQ(config.index.rerank_candidates, 24U);
   EXPECT_EQ(config.log_level, "debug");
 }
 
@@ -100,6 +108,13 @@ TEST(ConfigTest, RejectsInvalidMaximumFileSize) {
   TemporaryConfig file(
       "llcl-file-size.json",
       R"({"generation_model":{"path":"model.gguf"},"index":{"max_file_bytes":0}})");
+  EXPECT_THROW(static_cast<void>(load_config(file.path())), std::invalid_argument);
+}
+
+TEST(ConfigTest, RejectsRerankCandidatesOutsideConfiguredWindow) {
+  TemporaryConfig file(
+      "llcl-rerank-window.json",
+      R"({"generation_model":{"path":"model.gguf"},"index":{"rerank_candidates":19}})");
   EXPECT_THROW(static_cast<void>(load_config(file.path())), std::invalid_argument);
 }
 
