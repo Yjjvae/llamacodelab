@@ -1,12 +1,12 @@
 # LlamaCodeLab
 
-一个基于 llama.cpp 的本地 C++ 代码库智能助手。目前完成到 M7：
-工程骨架、真实 GGUF 的 CPU/CUDA 流式推理、多轮消息、安全的仓库扫描、稳定代码切块和可持久化的本地向量检索。
+一个基于 llama.cpp 的本地 C++ 代码库智能助手。目前完成到 M8：
+工程骨架、真实 GGUF 的 CPU/CUDA 流式推理、多轮消息、安全的仓库扫描、持久化向量检索和本地 HTTP/SSE 服务。
 
 ## Status
 
-M0–M7 已完成。`ask` 会临时扫描仓库、检索相关 Chunk，以真实 tokenizer 预算构造防注入 RAG
-提示词，并输出带源文件和行号的引用；`index` 则构建可增量更新的持久化索引。
+M0–M8 已完成。`ask` 会临时扫描仓库、检索相关 Chunk，以真实 tokenizer 预算构造防注入 RAG
+提示词，并输出带源文件和行号的引用；`index` 构建可增量更新的持久化索引；`llcl-server` 提供 HTTP/SSE API。
 
 ## Requirements
 
@@ -60,6 +60,23 @@ cmake --workflow --preset asan
   --config configs/default.json --repo . \
   "Where is the vector index implemented?"
 ```
+
+## HTTP 服务
+
+```bash
+./build/release-cuda/apps/server/llcl-server \
+  --config configs/default.json --repo /path/to/repository --port 8080
+
+./scripts/smoke_test.sh http://127.0.0.1:8080
+```
+
+支持 `GET /healthz`、`GET /readyz`、`GET /v1/models`、`GET /metrics`、`POST /v1/index`、
+`POST /v1/search` 和 `POST /v1/chat/completions`。每个响应带 `X-Request-Id`；生成队列容量为 4，
+满载时非流式 chat 返回 `429`。`stream: true` 使用 SSE，依次发送 `token`、`citations`、`metrics` 和
+`done` 事件。
+
+`/v1/chat/completions` 是 OpenAI 风格的最小子集：支持 `messages`（取最后一条 user 消息）、`question`、
+`top_k` 和 `stream`；不支持 tools、JSON mode、鉴权、模型选择或并行生成。
 
 `chat` 会从 GGUF 读取模板，预留生成 token 后按 token 预算丢弃最早的非 system 历史消息。
 简单输入可用 `--system` 和重复的 `--message`；带 assistant 历史或需要严格保序时使用重复的

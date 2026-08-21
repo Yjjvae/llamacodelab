@@ -14,7 +14,7 @@ namespace {
 
 } // namespace
 
-AskService::AskService(IEmbedder& embedder, IVectorIndex& index, IChunkRepository& chunks,
+AskService::AskService(IEmbedder& embedder, const IVectorIndex& index, IChunkRepository& chunks,
                        ContextBudget& context_budget, ITextGenerator& generator,
                        GenerationOptions options, RagPromptBudget budget)
     : embedder_(embedder), index_(index), chunks_(chunks), context_budget_(context_budget),

@@ -13,12 +13,14 @@ add_executable(
   unit/context_budget_test.cpp
   unit/ask_service_test.cpp
   unit/vector_file_test.cpp
+  unit/generation_queue_test.cpp
   integration/incremental_index_test.cpp
+  integration/http_api_test.cpp
 )
 target_include_directories(llcl_unit_tests PRIVATE "${PROJECT_SOURCE_DIR}/tests")
 target_link_libraries(
   llcl_unit_tests
-  PRIVATE GTest::gtest_main llcl_application llcl_ingestion llcl_retrieval llcl_support llcl_domain
+  PRIVATE GTest::gtest_main llcl_http llcl_application llcl_ingestion llcl_retrieval llcl_support llcl_domain
 )
 llcl_set_project_warnings(llcl_unit_tests)
 llcl_enable_sanitizers(llcl_unit_tests)

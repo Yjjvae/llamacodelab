@@ -57,6 +57,7 @@ add_library(
   application/prompt_builder.cpp
   application/context_budget.cpp
   application/ask_service.cpp
+  application/generation_queue.cpp
   application/index_service.cpp
 )
 target_include_directories(
@@ -66,6 +67,12 @@ target_include_directories(
 target_link_libraries(llcl_application PUBLIC llcl_domain llcl_ingestion llcl_retrieval llcl_support)
 llcl_set_project_warnings(llcl_application)
 llcl_enable_sanitizers(llcl_application)
+
+add_library(llcl_http STATIC adapters/http/http_server.cpp)
+target_include_directories(llcl_http PUBLIC "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>")
+target_link_libraries(llcl_http PUBLIC llcl_application nlohmann_json::nlohmann_json httplib::httplib)
+llcl_set_project_warnings(llcl_http)
+llcl_enable_sanitizers(llcl_http)
 
 add_library(
   llcl_llama
