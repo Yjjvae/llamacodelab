@@ -16,11 +16,43 @@
 Use a lowercase category and a concise kebab-case description:
 
 ```text
-feature/m5-vector-search
+feat/m5-vector-search
 fix/scan-symlink-boundary
 docs/update-cuda-benchmark
 perf/reduce-chunk-allocation
 ```
+
+## Branch lifecycle and integration
+
+`main` is the protected integration branch: it must remain buildable, tested, and suitable for a
+release at all times. Do not develop directly on it.
+
+Keep multiple branches when they represent independent work. A branch should cover one coherent
+feature, bug fix, experiment, or maintenance topic; it can contain several commits and stay open
+while other branches merge. Rebase or merge `main` into a long-lived branch before its PR is ready
+when needed to resolve drift.
+
+Use these lifecycles:
+
+| Branch kind | Typical lifetime | Integration rule |
+|---|---|---|
+| `feat/*`, `fix/*`, `perf/*`, `refactor/*` | Until one coherent capability is reviewed | PR into `main`; delete after merge unless intentionally long-lived |
+| `docs/*`, `test/*`, `ci/*`, `build/*`, `chore/*` | Small, focused maintenance work | PR into `main`; normally no release by itself |
+| `experiment/*`, `spike/*` | Exploratory or comparative work | Keep while useful; merge only after converting it into a supported change |
+| `release/*` | Release preparation | Short-lived; merge only after release checks and notes are ready |
+
+Merge frequency follows integration readiness, not commit frequency. It is normal to keep several
+open feature branches and merge only work that is independently reviewable and green in CI. Delete
+merged short-lived remote branches to keep the repository navigable; GitHub retains the PR, commits,
+and merge history. Preserve explicitly named long-lived experiment or maintenance branches.
+
+## Releases
+
+Merging a PR does not automatically create a version, tag, or GitHub Release. Release only when a
+user-visible capability, a compatible group of fixes, a milestone, or a planned maintenance batch
+is ready. Documentation-only and CI-only PRs normally merge without a release. Create the tag from
+the final `main` commit, then publish notes describing behavior changes, verification, and upgrade
+considerations.
 
 ## Commit messages
 
@@ -102,5 +134,6 @@ Every PR should include:
 4. Documentation and worklog updates when user-facing behavior or a milestone changes.
 5. Any model, GPU, benchmark, or compatibility assumptions needed to reproduce the result.
 
-Prefer squash merges into `main`. A completed milestone is tagged on `main` and may receive a
-GitHub Release containing source archives and release notes; model weights are never attached.
+Prefer squash merges into `main`. A release is tagged on `main` only when it meets the release
+criteria above; it may receive a GitHub Release containing source archives and release notes. Model
+weights are never attached.
