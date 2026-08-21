@@ -1,10 +1,12 @@
 #include "adapters/llama/llama_embedder.hpp"
 #include "adapters/llama/llama_generator.hpp"
 #include "adapters/llama/llama_runtime.hpp"
+#include "adapters/sqlite/fts_search.hpp"
 #include "adapters/sqlite/sqlite_chunk_repository.hpp"
 #include "llamacodelab/application/ask_service.hpp"
 #include "llamacodelab/application/context_budget.hpp"
 #include "llamacodelab/application/generation_queue.hpp"
+#include "llamacodelab/application/hybrid_retriever.hpp"
 #include "llamacodelab/application/index_service.hpp"
 #include "llamacodelab/http/http_server.hpp"
 #include "llamacodelab/support/config.hpp"
@@ -39,6 +41,7 @@ int main(int argc, char** argv) {
                                      config.embedding_model.path.filename().string());
     llcl::sqlite_adapter::SqliteChunkRepository chunk_repository(config.index.data_dir /
                                                                  "index.sqlite3");
+    llcl::sqlite_adapter::FtsSearch keyword_search(config.index.data_dir / "index.sqlite3");
     llcl::GenerationQueue generation_queue(4);
     (void)index_service.update(repository);
 
@@ -53,8 +56,8 @@ int main(int argc, char** argv) {
                 if (snapshot == nullptr) {
                   throw std::runtime_error("repository index has not been built");
                 }
-                const auto hits =
-                    snapshot->search(embedder.embed(question, llcl::EmbeddingKind::query), top_k);
+                llcl::HybridRetriever retriever(embedder, *snapshot, keyword_search);
+                const auto hits = retriever.retrieve(question, top_k);
                 std::vector<llcl::ChunkId> ids;
                 ids.reserve(hits.size());
                 for (const auto& hit : hits) {
@@ -75,8 +78,9 @@ int main(int argc, char** argv) {
                                              .reserved_output_tokens = 512,
                                              .safety_margin_tokens = 64};
                 llcl::GenerationOptions options{.max_tokens = 512};
-                llcl::AskService service(embedder, *snapshot, chunk_repository, context_budget,
-                                         generator, options, budget);
+                llcl::HybridRetriever retriever(embedder, *snapshot, keyword_search);
+                llcl::AskService service(retriever, chunk_repository, context_budget, generator,
+                                         options, budget);
                 return service.ask(question, top_k, on_token, stop_token);
               },
       };

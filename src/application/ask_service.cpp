@@ -14,10 +14,10 @@ namespace {
 
 } // namespace
 
-AskService::AskService(IEmbedder& embedder, const IVectorIndex& index, IChunkRepository& chunks,
+AskService::AskService(const IRetriever& retriever, IChunkRepository& chunks,
                        ContextBudget& context_budget, ITextGenerator& generator,
                        GenerationOptions options, RagPromptBudget budget)
-    : embedder_(embedder), index_(index), chunks_(chunks), context_budget_(context_budget),
+    : retriever_(retriever), chunks_(chunks), context_budget_(context_budget),
       generator_(generator), options_(options), budget_(budget) {}
 
 AskResult AskService::ask(const std::string_view question, const std::size_t top_k,
@@ -25,8 +25,7 @@ AskResult AskService::ask(const std::string_view question, const std::size_t top
   if (question.empty() || top_k == 0 || !on_token) {
     throw std::invalid_argument("question, top_k, and token callback must be provided");
   }
-  const auto query = embedder_.embed(question, EmbeddingKind::query);
-  const auto hits = index_.search(query, top_k);
+  const auto hits = retriever_.retrieve(question, top_k);
   if (hits.empty()) {
     throw std::runtime_error("no repository context matched the question");
   }

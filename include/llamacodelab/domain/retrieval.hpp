@@ -43,6 +43,22 @@ public:
   [[nodiscard]] virtual std::size_t dimension() const noexcept = 0;
 };
 
+class IKeywordSearcher {
+public:
+  virtual ~IKeywordSearcher() = default;
+
+  [[nodiscard]] virtual std::vector<SearchHit> search(std::string_view query,
+                                                      std::size_t top_k) const = 0;
+};
+
+class IRetriever {
+public:
+  virtual ~IRetriever() = default;
+
+  [[nodiscard]] virtual std::vector<SearchHit> retrieve(std::string_view query,
+                                                        std::size_t top_k) const = 0;
+};
+
 class IChunkRepository {
 public:
   virtual ~IChunkRepository() = default;

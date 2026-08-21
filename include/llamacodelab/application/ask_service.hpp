@@ -28,16 +28,14 @@ struct AskResult {
 
 class AskService {
 public:
-  AskService(IEmbedder& embedder, const IVectorIndex& index, IChunkRepository& chunks,
-             ContextBudget& context_budget, ITextGenerator& generator, GenerationOptions options,
-             RagPromptBudget budget);
+  AskService(const IRetriever& retriever, IChunkRepository& chunks, ContextBudget& context_budget,
+             ITextGenerator& generator, GenerationOptions options, RagPromptBudget budget);
 
   [[nodiscard]] AskResult ask(std::string_view question, std::size_t top_k,
                               const TokenCallback& on_token, std::stop_token stop_token);
 
 private:
-  IEmbedder& embedder_;
-  const IVectorIndex& index_;
+  const IRetriever& retriever_;
   IChunkRepository& chunks_;
   ContextBudget& context_budget_;
   ITextGenerator& generator_;

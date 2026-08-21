@@ -66,8 +66,26 @@ SqliteChunkRepository::SqliteChunkRepository(const std::filesystem::path& databa
     content TEXT NOT NULL, content_hash TEXT NOT NULL, embedding_offset INTEGER,
     FOREIGN KEY(document_id) REFERENCES documents(id) ON DELETE CASCADE);
     CREATE TABLE IF NOT EXISTS index_metadata (key TEXT PRIMARY KEY, value TEXT NOT NULL);
-    CREATE INDEX IF NOT EXISTS idx_chunks_document_id ON chunks(document_id);)");
-  set_metadata("schema_version", "1");
+    CREATE INDEX IF NOT EXISTS idx_chunks_document_id ON chunks(document_id);
+    CREATE VIRTUAL TABLE IF NOT EXISTS chunk_fts USING fts5(path, symbol, content);
+    CREATE TRIGGER IF NOT EXISTS chunks_fts_insert AFTER INSERT ON chunks BEGIN
+      INSERT INTO chunk_fts(rowid,path,symbol,content)
+      SELECT new.id,documents.relative_path,new.symbol,new.content
+      FROM documents WHERE documents.id=new.document_id;
+    END;
+    CREATE TRIGGER IF NOT EXISTS chunks_fts_delete AFTER DELETE ON chunks BEGIN
+      DELETE FROM chunk_fts WHERE rowid=old.id;
+    END;
+    CREATE TRIGGER IF NOT EXISTS chunks_fts_update AFTER UPDATE OF document_id,symbol,content ON chunks BEGIN
+      DELETE FROM chunk_fts WHERE rowid=old.id;
+      INSERT INTO chunk_fts(rowid,path,symbol,content)
+      SELECT new.id,documents.relative_path,new.symbol,new.content
+      FROM documents WHERE documents.id=new.document_id;
+    END;)");
+  execute(database_, R"(INSERT OR REPLACE INTO chunk_fts(rowid,path,symbol,content)
+    SELECT chunks.id,documents.relative_path,chunks.symbol,chunks.content
+    FROM chunks JOIN documents ON documents.id=chunks.document_id;)");
+  set_metadata("schema_version", "2");
 }
 
 SqliteChunkRepository::~SqliteChunkRepository() {
