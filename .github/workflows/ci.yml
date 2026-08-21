@@ -1,9 +1,9 @@
 name: ci
 
-# Actions billing is currently unavailable for this private repository. Keep the
-# workflow for reproducibility, but require an explicit manual dispatch until
-# account billing is restored.
 on:
+  pull_request:
+  push:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
