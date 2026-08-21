@@ -26,10 +26,16 @@ struct AskResult {
   bool citations_valid{};
 };
 
+struct AskRetrievalOptions {
+  IReranker* reranker{};
+  std::size_t rerank_candidates{30};
+};
+
 class AskService {
 public:
   AskService(const IRetriever& retriever, IChunkRepository& chunks, ContextBudget& context_budget,
-             ITextGenerator& generator, GenerationOptions options, RagPromptBudget budget);
+             ITextGenerator& generator, GenerationOptions options, RagPromptBudget budget,
+             AskRetrievalOptions retrieval_options = {});
 
   [[nodiscard]] AskResult ask(std::string_view question, std::size_t top_k,
                               const TokenCallback& on_token, std::stop_token stop_token);
@@ -41,6 +47,7 @@ private:
   ITextGenerator& generator_;
   GenerationOptions options_;
   RagPromptBudget budget_;
+  AskRetrievalOptions retrieval_options_;
 };
 
 } // namespace llcl

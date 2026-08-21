@@ -1,5 +1,6 @@
 #include "adapters/llama/llama_embedder.hpp"
 #include "adapters/llama/llama_generator.hpp"
+#include "adapters/llama/llama_reranker.hpp"
 #include "adapters/llama/llama_runtime.hpp"
 #include "adapters/sqlite/fts_search.hpp"
 #include "adapters/sqlite/sqlite_chunk_repository.hpp"
@@ -15,6 +16,7 @@
 #include <CLI/CLI.hpp>
 #include <iostream>
 #include <memory>
+#include <optional>
 #include <stdexcept>
 #include <string>
 
@@ -35,6 +37,10 @@ int main(int argc, char** argv) {
     llcl::configure_logging(config.log_level);
     llcl::llama_adapter::LlamaRuntime runtime;
     llcl::llama_adapter::LlamaGenerator generator(runtime, config.generation_model);
+    std::optional<llcl::llama_adapter::LlamaReranker> reranker;
+    if (config.index.reranker_enabled) {
+      reranker.emplace(generator);
+    }
     llcl::llama_adapter::LlamaEmbedder embedder(runtime, config.embedding_model);
     llcl::SearchIndexHandle index_handle;
     llcl::IndexService index_service(embedder, index_handle, config.index,
@@ -80,7 +86,9 @@ int main(int argc, char** argv) {
                 llcl::GenerationOptions options{.max_tokens = 512};
                 llcl::HybridRetriever retriever(embedder, *snapshot, keyword_search);
                 llcl::AskService service(retriever, chunk_repository, context_budget, generator,
-                                         options, budget);
+                                         options, budget,
+                                         {.reranker = reranker ? &*reranker : nullptr,
+                                          .rerank_candidates = config.index.rerank_candidates});
                 return service.ask(question, top_k, on_token, stop_token);
               },
       };

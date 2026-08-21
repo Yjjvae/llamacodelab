@@ -1,3 +1,5 @@
+#include "adapters/vector/brute_force_index.hpp"
+#include "adapters/vector/hnsw_index.hpp"
 #include "llamacodelab/application/index_service.hpp"
 
 #include <filesystem>
@@ -91,6 +93,26 @@ TEST(IncrementalIndexTest, RejectsAnIndexBuiltForAnotherEmbeddingModel) {
   (void)first.update(repository);
   IndexService incompatible(embedder, handle, config, "embedding-v2");
   EXPECT_THROW((void)incompatible.update(repository), std::runtime_error);
+}
+
+TEST(IncrementalIndexTest, SelectsConfiguredHnswOrBruteForceSnapshot) {
+  TempDirectory temporary;
+  const auto repository = temporary.path / "repo";
+  std::filesystem::create_directories(repository);
+  write_file(repository / "one.cpp", "int one() { return 1; }\n");
+  CountingEmbedder embedder;
+  SearchIndexHandle handle;
+  IndexConfig config;
+  config.data_dir = temporary.path / "index";
+  config.hnsw_enabled = true;
+  IndexService hnsw_service(embedder, handle, config, "test-embedding-v1");
+  (void)hnsw_service.update(repository);
+  EXPECT_NE(dynamic_cast<const vector_adapter::HnswIndex*>(handle.load().get()), nullptr);
+
+  config.hnsw_enabled = false;
+  IndexService brute_service(embedder, handle, config, "test-embedding-v1");
+  (void)brute_service.update(repository);
+  EXPECT_NE(dynamic_cast<const vector_adapter::BruteForceIndex*>(handle.load().get()), nullptr);
 }
 
 } // namespace llcl::test

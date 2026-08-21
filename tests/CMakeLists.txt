@@ -11,6 +11,7 @@ add_executable(
   unit/similarity_test.cpp
   unit/brute_force_index_test.cpp
   unit/hnsw_index_test.cpp
+  unit/llama_reranker_test.cpp
   unit/reciprocal_rank_fusion_test.cpp
   unit/context_budget_test.cpp
   unit/ask_service_test.cpp
@@ -24,7 +25,7 @@ add_executable(
 target_include_directories(llcl_unit_tests PRIVATE "${PROJECT_SOURCE_DIR}/tests")
 target_link_libraries(
   llcl_unit_tests
-  PRIVATE GTest::gtest_main llcl_http llcl_application llcl_ingestion llcl_retrieval llcl_support llcl_domain
+  PRIVATE GTest::gtest_main llcl_http llcl_application llcl_ingestion llcl_retrieval llcl_llama llcl_support llcl_domain
 )
 llcl_set_project_warnings(llcl_unit_tests)
 llcl_enable_sanitizers(llcl_unit_tests)

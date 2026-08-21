@@ -1,12 +1,12 @@
 # LlamaCodeLab
 
-一个基于 llama.cpp 的本地 C++ 代码库智能助手。目前完成到 M8：
+一个基于 llama.cpp 的本地 C++ 代码库智能助手。目前完成到 M9：
 工程骨架、真实 GGUF 的 CPU/CUDA 流式推理、多轮消息、安全的仓库扫描、持久化向量检索、SQLite FTS5/RRF
 混合检索和本地 HTTP/SSE 服务。
 
 ## Status
 
-M0–M8 已完成。`ask` 会临时扫描仓库、检索相关 Chunk，以真实 tokenizer 预算构造防注入 RAG
+M0–M9 已完成。`ask` 会临时扫描仓库、检索相关 Chunk，以真实 tokenizer 预算构造防注入 RAG
 提示词，并输出带源文件和行号的引用；`index` 构建可增量更新的持久化索引；`llcl-server` 提供 HTTP/SSE API。
 
 ## Requirements
@@ -92,6 +92,11 @@ cmake --workflow --preset asan
 `index` 使用 embedding 模型把索引写入 `index.data_dir`（默认 `var/index`）。元数据保存在
 SQLite，向量保存在带版本号的二进制快照中；重复执行只会重新 embedding 新增或内容发生改变的文件。
 模型标识或向量维度不一致时命令会拒绝加载旧索引，避免静默混用向量空间。
+
+服务端索引默认使用暴力向量检索；将 `index.hnsw_enabled` 设为 `true` 可切换为 HNSW，
+`index.hnsw_ef_search` 默认为 256。服务端还会始终使用 FTS5/BM25 与向量检索的 RRF 融合；
+可通过 `index.reranker_enabled` 开启最终重排。重排会让同一个本地生成模型对前 20–50 个候选逐条给出
+确定性相关性评级，再保留请求的前 `top_k` 条；默认关闭，适合先观察延迟与回答质量后再启用。
 
 `ask` 当前是内存式 RAG：每次调用都会重新扫描、切块和 embedding，因此结果不依赖旧索引；回答
 必须使用 `[S1]` 等引用，命令末尾会列出对应的文件和行号。

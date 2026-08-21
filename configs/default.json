@@ -18,7 +18,11 @@
     "chunk_lines": 80,
     "overlap_lines": 16,
     "max_file_bytes": 1048576,
-    "top_k": 8
+    "top_k": 8,
+    "hnsw_enabled": false,
+    "hnsw_ef_search": 256,
+    "reranker_enabled": false,
+    "rerank_candidates": 30
   },
   "log_level": "info"
 }

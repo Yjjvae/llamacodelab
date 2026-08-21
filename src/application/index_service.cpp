@@ -4,6 +4,7 @@
 #include "adapters/filesystem/text_chunker.hpp"
 #include "adapters/sqlite/sqlite_chunk_repository.hpp"
 #include "adapters/vector/brute_force_index.hpp"
+#include "adapters/vector/hnsw_index.hpp"
 #include "adapters/vector/vector_file.hpp"
 #include "llamacodelab/support/hash.hpp"
 
@@ -190,7 +191,17 @@ IndexUpdateResult IndexService::update(const std::filesystem::path& repository_r
       throw;
     }
   }
-  auto snapshot = std::make_shared<vector_adapter::BruteForceIndex>(embedder_.dimension());
+  std::shared_ptr<IVectorIndex> snapshot;
+  if (config_.hnsw_enabled) {
+    snapshot = std::make_shared<vector_adapter::HnswIndex>(
+        embedder_.dimension(),
+        vector_adapter::HnswOptions{.max_elements = std::max<std::size_t>(1, vectors.size()),
+                                    .m = 16,
+                                    .ef_construction = 200,
+                                    .ef_search = config_.hnsw_ef_search});
+  } else {
+    snapshot = std::make_shared<vector_adapter::BruteForceIndex>(embedder_.dimension());
+  }
   for (const auto& [id, values] : vectors) {
     snapshot->upsert(id, values);
   }

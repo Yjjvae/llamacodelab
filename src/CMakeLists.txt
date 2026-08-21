@@ -89,6 +89,7 @@ add_library(
   adapters/llama/llama_chat_template.cpp
   adapters/llama/llama_generator.cpp
   adapters/llama/llama_embedder.cpp
+  adapters/llama/llama_reranker.cpp
 )
 target_include_directories(
   llcl_llama

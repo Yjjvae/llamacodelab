@@ -59,6 +59,16 @@ public:
                                                         std::size_t top_k) const = 0;
 };
 
+class IReranker {
+public:
+  virtual ~IReranker() = default;
+
+  [[nodiscard]] virtual std::vector<SearchHit> rerank(std::string_view query,
+                                                      std::span<const SearchHit> candidates,
+                                                      std::span<const Chunk> chunks,
+                                                      std::size_t top_k) = 0;
+};
+
 class IChunkRepository {
 public:
   virtual ~IChunkRepository() = default;

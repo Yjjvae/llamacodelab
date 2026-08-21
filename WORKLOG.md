@@ -6,10 +6,10 @@
 ## 当前状态
 
 - 日期：2026-08-22（Asia/Shanghai）
-- 教程进度：第 10–18 章，即 M0–M8
-- 项目版本：`0.8.0`（待 M8 PR 合并后发布）
-- 结论：M8 已实现本地 HTTP/SSE API、有限生成队列、健康检查与 Prometheus 指标入口
-- Git：M7 已通过 PR #12 合并并发布 `v0.7.0`
+- 教程进度：第 10–19 章，即 M0–M9
+- 项目版本：`0.9.0`（M9 收尾 PR 待合并后发布）
+- 结论：M9 已实现 HNSW、FTS5/BM25 + RRF 混合检索和可选本地生成式重排
+- Git：M8 已发布 `v0.8.0`；M9 按 HNSW、混合检索和重排三个聚焦 PR 交付
 
 | 里程碑 | 状态 | 可验证结果 |
 |---|---|---|
@@ -25,6 +25,7 @@
 | M6 RAG 问答 | 完成 | 上下文预算、提示词防注入、引用校验和 `ask` CLI |
 | M7 持久化索引 | 完成 | SQLite 元数据、原子向量快照、增量 embedding 和 `index` CLI |
 | M8 HTTP/SSE 服务 | 完成 | 路由、SSE、4 槽生成队列、健康检查、指标与回环集成测试 |
+| M9 高级检索 | 收尾中 | HNSW、FTS5/BM25、RRF、可选 rerank 与回退路径 |
 
 ## 本次实现范围
 
@@ -101,6 +102,20 @@
   `token`、`citations`、`metrics` 和 `done` SSE 事件。
 - 本机验证：42 个测试通过或按模型环境跳过；HTTP 集成测试在回环端口验证 health/readiness、request ID、
   JSON chat 与 SSE。受当前沙箱限制，监听回环端口的测试以本机授权运行方式执行。
+
+### 2026-08-22 — M9 高级检索
+
+- HNSW 以固定的 hnswlib v0.8.0 适配器接入，保留 `IVectorIndex` 和 `BruteForceIndex`；索引更新会按
+  `index.hnsw_enabled` 选择后端，关闭时无需 HNSW 即可正常工作。`ef_search=256` 在 10,000 条、64 维、
+  200 查询的确定性基准中达到 Recall@10 0.9900，p95 419 µs；暴力检索 p95 为 1,617 µs。
+- SQLite FTS5 同步索引 `path`、`symbol`、`content`；服务端以 BM25 名次和向量名次进行 RRF（`k=60`）融合，
+  不直接相加不同量纲的分数。
+- 新增可选 `LlamaReranker`：使用既有本地生成模型将前 20–50 个混合候选逐条评为 0–3，再返回请求的
+  `top_k`。默认关闭，不额外占用模型显存；候选文本被明确标为不可信。
+- 契约评测固定了“向量第一名无关、第二名直接相关”的两条候选，重排后 Recall@1 从 0/1 变为 1/1；这是
+  可重复的流程验证，真实模型的质量与延迟仍应使用目标仓库的标注查询集重新测量。
+- 验证：`./scripts/quality.sh --preset dev` 通过（50 项通过、6 项真实模型测试按环境跳过）；刷新后的
+  `ctest --test-dir build/asan --output-on-failure` 同样为 50 项通过、6 项跳过，未报告 ASan/UBSan 问题。
 
 ## 固定依赖
 

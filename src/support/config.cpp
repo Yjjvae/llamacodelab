@@ -33,6 +33,17 @@ using Json = nlohmann::json;
   return static_cast<std::size_t>(value);
 }
 
+[[nodiscard]] bool read_bool(const Json& object, const std::string_view key, const bool fallback) {
+  const auto iterator = object.find(key);
+  if (iterator == object.end()) {
+    return fallback;
+  }
+  if (!iterator->is_boolean()) {
+    throw std::invalid_argument(std::string(key) + " must be a boolean");
+  }
+  return iterator->get<bool>();
+}
+
 [[nodiscard]] ModelConfig read_model(const Json& root, std::string_view key,
                                      const ModelConfig& fallback) {
   const auto iterator = root.find(key);
@@ -88,6 +99,10 @@ using Json = nlohmann::json;
   result.overlap_lines = read_size(*iterator, "overlap_lines", result.overlap_lines);
   result.max_file_bytes = read_size(*iterator, "max_file_bytes", result.max_file_bytes);
   result.top_k = read_size(*iterator, "top_k", result.top_k);
+  result.hnsw_enabled = read_bool(*iterator, "hnsw_enabled", result.hnsw_enabled);
+  result.hnsw_ef_search = read_size(*iterator, "hnsw_ef_search", result.hnsw_ef_search);
+  result.reranker_enabled = read_bool(*iterator, "reranker_enabled", result.reranker_enabled);
+  result.rerank_candidates = read_size(*iterator, "rerank_candidates", result.rerank_candidates);
   return result;
 }
 
@@ -153,6 +168,12 @@ void validate_config(const AppConfig& config) {
   }
   if (config.index.top_k == 0 || config.index.top_k > 1'000) {
     throw std::invalid_argument("index.top_k must be in [1, 1000]");
+  }
+  if (config.index.hnsw_ef_search == 0 || config.index.hnsw_ef_search > 10'000) {
+    throw std::invalid_argument("index.hnsw_ef_search must be in [1, 10000]");
+  }
+  if (config.index.rerank_candidates < 20 || config.index.rerank_candidates > 50) {
+    throw std::invalid_argument("index.rerank_candidates must be in [20, 50]");
   }
   if (config.log_level != "trace" && config.log_level != "debug" && config.log_level != "info" &&
       config.log_level != "warn" && config.log_level != "error" && config.log_level != "critical" &&
