@@ -39,6 +39,12 @@ set(SPDLOG_BUILD_EXAMPLE OFF CACHE BOOL "" FORCE)
 set(SPDLOG_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(CLI11_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(CLI11_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+# The HTTP server only serves loopback HTTP in M8.  Disable optional transport and
+# compression discovery so cpp-httplib does not inherit incomplete system CMake targets.
+set(HTTPLIB_USE_OPENSSL_IF_AVAILABLE OFF CACHE BOOL "" FORCE)
+set(HTTPLIB_USE_ZLIB_IF_AVAILABLE OFF CACHE BOOL "" FORCE)
+set(HTTPLIB_USE_BROTLI_IF_AVAILABLE OFF CACHE BOOL "" FORCE)
+set(HTTPLIB_USE_ZSTD_IF_AVAILABLE OFF CACHE BOOL "" FORCE)
 
 FetchContent_MakeAvailable(nlohmann_json spdlog cli11 cpp_httplib)
 
