@@ -8,6 +8,7 @@
 #include "llamacodelab/application/ask_service.hpp"
 #include "llamacodelab/application/chat_session.hpp"
 #include "llamacodelab/application/context_budget.hpp"
+#include "llamacodelab/application/hybrid_retriever.hpp"
 #include "llamacodelab/application/index_service.hpp"
 #include "llamacodelab/application/prompt_builder.hpp"
 #include "llamacodelab/domain/chat.hpp"
@@ -305,12 +306,13 @@ int main(int argc, char** argv) {
       llcl::memory_adapter::InMemoryChunkRepository repository;
       repository.replace(std::move(chunks));
       llcl::ContextBudget context_budget;
+      llcl::VectorRetriever retriever(embedder, index);
       const llcl::RagPromptBudget budget{
           .model_context = config.generation_model.context_size,
           .reserved_output_tokens = static_cast<std::size_t>(ask_max_tokens),
           .safety_margin_tokens = 128,
       };
-      llcl::AskService service(embedder, index, repository, context_budget, generator,
+      llcl::AskService service(retriever, repository, context_budget, generator,
                                {.max_tokens = ask_max_tokens}, budget);
       std::string response;
       const auto result = service.ask(

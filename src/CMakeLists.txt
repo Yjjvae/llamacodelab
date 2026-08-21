@@ -39,6 +39,7 @@ add_library(
   adapters/vector/hnsw_index.cpp
   adapters/vector/vector_file.cpp
   adapters/memory/in_memory_chunk_repository.cpp
+  adapters/sqlite/fts_search.cpp
   adapters/sqlite/sqlite_chunk_repository.cpp
 )
 target_include_directories(
@@ -63,7 +64,9 @@ add_library(
   application/context_budget.cpp
   application/ask_service.cpp
   application/generation_queue.cpp
+  application/hybrid_retriever.cpp
   application/index_service.cpp
+  application/reciprocal_rank_fusion.cpp
 )
 target_include_directories(
   llcl_application

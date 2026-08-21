@@ -1,7 +1,8 @@
 # LlamaCodeLab
 
 一个基于 llama.cpp 的本地 C++ 代码库智能助手。目前完成到 M8：
-工程骨架、真实 GGUF 的 CPU/CUDA 流式推理、多轮消息、安全的仓库扫描、持久化向量检索和本地 HTTP/SSE 服务。
+工程骨架、真实 GGUF 的 CPU/CUDA 流式推理、多轮消息、安全的仓库扫描、持久化向量检索、SQLite FTS5/RRF
+混合检索和本地 HTTP/SSE 服务。
 
 ## Status
 
