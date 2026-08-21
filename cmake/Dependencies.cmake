@@ -27,12 +27,20 @@ FetchContent_Declare(
   DOWNLOAD_EXTRACT_TIMESTAMP TRUE
 )
 
+FetchContent_Declare(
+  cpp_httplib
+  URL https://github.com/yhirose/cpp-httplib/archive/refs/tags/v0.20.0.tar.gz
+  URL_HASH SHA256=18064587e0cc6a0d5d56d619f4cbbcaba47aa5d84d86013abbd45d95c6653866
+  DOWNLOAD_DIR "${PROJECT_SOURCE_DIR}/build/_downloads"
+  DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+)
+
 set(SPDLOG_BUILD_EXAMPLE OFF CACHE BOOL "" FORCE)
 set(SPDLOG_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(CLI11_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(CLI11_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 
-FetchContent_MakeAvailable(nlohmann_json spdlog cli11)
+FetchContent_MakeAvailable(nlohmann_json spdlog cli11 cpp_httplib)
 
 if(LLCL_BUILD_TESTS)
   FetchContent_Declare(

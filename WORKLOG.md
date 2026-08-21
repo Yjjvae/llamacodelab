@@ -6,10 +6,10 @@
 ## 当前状态
 
 - 日期：2026-08-22（Asia/Shanghai）
-- 教程进度：第 10–17 章，即 M0–M7
-- 项目版本：`0.7.0`（待 M7 PR 合并后发布）
-- 结论：M7 已实现 SQLite 元数据、原子向量快照与增量索引 CLI
-- Git：M2–M6 已通过 PR 合并；标签和 Release 为 `v0.2.0` 至 `v0.6.1`
+- 教程进度：第 10–18 章，即 M0–M8
+- 项目版本：`0.8.0`（待 M8 PR 合并后发布）
+- 结论：M8 已实现本地 HTTP/SSE API、有限生成队列、健康检查与 Prometheus 指标入口
+- Git：M7 已通过 PR #12 合并并发布 `v0.7.0`
 
 | 里程碑 | 状态 | 可验证结果 |
 |---|---|---|
@@ -24,6 +24,7 @@
 | M5 向量检索 | 完成 | GGUF embedding、批量编码、余弦 Top-K、ground-truth fixture 与基准 |
 | M6 RAG 问答 | 完成 | 上下文预算、提示词防注入、引用校验和 `ask` CLI |
 | M7 持久化索引 | 完成 | SQLite 元数据、原子向量快照、增量 embedding 和 `index` CLI |
+| M8 HTTP/SSE 服务 | 完成 | 路由、SSE、4 槽生成队列、健康检查、指标与回环集成测试 |
 
 ## 本次实现范围
 
@@ -89,6 +90,18 @@
   多角色历史；自动应用模板与 token 预算。`generate` 同样支持 top-k 和 repeat penalty。
 - 每个生成请求记录 request id、模型、prompt token 数、TTFT、输出 token 数和结束原因。
 
+### 2026-08-22 — M8 HTTP/SSE 服务
+
+- 固定 `cpp-httplib` v0.20.0 归档和 SHA-256；HTTP 依赖仅出现在适配器层与 `llcl-server`。
+- 新增 `llcl-server --config --repo --port`，启动时加载模型和索引；提供 health、readiness、模型、索引、
+  检索、聊天、SSE 和 Prometheus 文本指标路由。所有 JSON 响应均含 `X-Request-Id`。
+- 新增单 worker 的 `GenerationQueue`，容量固定为 4；非流式生成在队列饱和时返回 429，服务关闭时停止接收
+  新任务并向正在执行的任务传递 stop token。
+- `/v1/chat/completions` 复用 `AskService`：常规请求返回最小 OpenAI 风格 JSON，`stream: true` 发送
+  `token`、`citations`、`metrics` 和 `done` SSE 事件。
+- 本机验证：42 个测试通过或按模型环境跳过；HTTP 集成测试在回环端口验证 health/readiness、request ID、
+  JSON chat 与 SSE。受当前沙箱限制，监听回环端口的测试以本机授权运行方式执行。
+
 ## 固定依赖
 
 | 依赖 | 版本/commit | 归档 SHA-256 |
@@ -97,6 +110,7 @@
 | nlohmann/json | `v3.12.0` / `65ee68451d8eb2b5f3a30b410476ab83deb3289b` | `13ef31d691947940a08909f8e0772f1d7d68e5da1678ee812a49c4bb0c996b2f` |
 | spdlog | `v1.15.3` / `6fa36017cfd5731d617e1a934f0e5ea9c4445b13` | `5097fb362e79a2bd7247beaf1f8377ed60e274fbe83a4b33e7b73383f0279022` |
 | CLI11 | `v2.5.0` / `4160d259d961cd393fd8d67590a8c7d210207348` | `c91e8768600e61be11f7250e3cf3e71afd9d0f18f9c9e9e209a8e084ca08cd85` |
+| cpp-httplib | `v0.20.0` | `18064587e0cc6a0d5d56d619f4cbbcaba47aa5d84d86013abbd45d95c6653866` |
 | GoogleTest | `v1.17.0` / `52eb8108c5bdec04579160ae17225d66034bd723` | `745c55415660044610f7fcd3af7a6420d5de16a7dbb9ebfe2e131275676232be` |
 
 ## 实际环境

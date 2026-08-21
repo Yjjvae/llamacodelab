@@ -28,7 +28,7 @@ struct AskResult {
 
 class AskService {
 public:
-  AskService(IEmbedder& embedder, IVectorIndex& index, IChunkRepository& chunks,
+  AskService(IEmbedder& embedder, const IVectorIndex& index, IChunkRepository& chunks,
              ContextBudget& context_budget, ITextGenerator& generator, GenerationOptions options,
              RagPromptBudget budget);
 
@@ -37,7 +37,7 @@ public:
 
 private:
   IEmbedder& embedder_;
-  IVectorIndex& index_;
+  const IVectorIndex& index_;
   IChunkRepository& chunks_;
   ContextBudget& context_budget_;
   ITextGenerator& generator_;
