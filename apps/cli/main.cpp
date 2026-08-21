@@ -8,6 +8,7 @@
 #include "llamacodelab/application/ask_service.hpp"
 #include "llamacodelab/application/chat_session.hpp"
 #include "llamacodelab/application/context_budget.hpp"
+#include "llamacodelab/application/index_service.hpp"
 #include "llamacodelab/application/prompt_builder.hpp"
 #include "llamacodelab/domain/chat.hpp"
 #include "llamacodelab/domain/generation.hpp"
@@ -103,6 +104,16 @@ int main(int argc, char** argv) {
   scan_command->add_option("--exclude", scan_exclude_globs,
                            "Relative-path glob to exclude; repeatable");
   scan_command->add_flag("--dry-run", scan_dry_run, "Scan and report without persistent output");
+
+  std::filesystem::path index_repository;
+  std::string index_config_path = "configs/default.json";
+  auto* index_command =
+      app.add_subcommand("index", "Build or incrementally update the persistent vector index");
+  index_command->add_option("--repo", index_repository, "Repository root to index")
+      ->required()
+      ->check(CLI::ExistingDirectory);
+  index_command->add_option("--config", index_config_path, "JSON configuration file")
+      ->check(CLI::ExistingFile);
 
   std::filesystem::path ask_repository;
   std::string ask_config_path = "configs/default.json";
@@ -220,6 +231,24 @@ int main(int argc, char** argv) {
       if (scan_dry_run) {
         std::cerr << "dry_run=true\n";
       }
+      return 0;
+    }
+
+    if (*index_command) {
+      const auto config = llcl::load_config(index_config_path);
+      llcl::configure_logging(config.log_level);
+      llcl::llama_adapter::LlamaRuntime runtime;
+      llcl::llama_adapter::LlamaEmbedder embedder(runtime, config.embedding_model);
+      llcl::SearchIndexHandle index_handle;
+      llcl::IndexService index_service(embedder, index_handle, config.index,
+                                       config.embedding_model.path.filename().string());
+      const auto result = index_service.update(index_repository);
+      std::cout << "generation=" << result.generation << '\n'
+                << "files_added=" << result.files_added << '\n'
+                << "files_changed=" << result.files_changed << '\n'
+                << "files_removed=" << result.files_removed << '\n'
+                << "files_unchanged=" << result.files_unchanged << '\n'
+                << "chunks_embedded=" << result.embedded_chunks << '\n';
       return 0;
     }
 

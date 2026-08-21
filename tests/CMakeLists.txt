@@ -12,6 +12,8 @@ add_executable(
   unit/brute_force_index_test.cpp
   unit/context_budget_test.cpp
   unit/ask_service_test.cpp
+  unit/vector_file_test.cpp
+  integration/incremental_index_test.cpp
 )
 target_include_directories(llcl_unit_tests PRIVATE "${PROJECT_SOURCE_DIR}/tests")
 target_link_libraries(

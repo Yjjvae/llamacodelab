@@ -1,12 +1,12 @@
 # LlamaCodeLab
 
-一个基于 llama.cpp 的本地 C++ 代码库智能助手。目前完成到 M6：
-工程骨架、真实 GGUF 的 CPU/CUDA 流式推理、多轮消息、安全的仓库扫描、稳定代码切块和本地向量检索。
+一个基于 llama.cpp 的本地 C++ 代码库智能助手。目前完成到 M7：
+工程骨架、真实 GGUF 的 CPU/CUDA 流式推理、多轮消息、安全的仓库扫描、稳定代码切块和可持久化的本地向量检索。
 
 ## Status
 
-M0–M6 已完成。`ask` 会临时扫描仓库、检索相关 Chunk，以真实 tokenizer 预算构造防注入 RAG
-提示词，并输出带源文件和行号的引用。
+M0–M7 已完成。`ask` 会临时扫描仓库、检索相关 Chunk，以真实 tokenizer 预算构造防注入 RAG
+提示词，并输出带源文件和行号的引用；`index` 则构建可增量更新的持久化索引。
 
 ## Requirements
 
@@ -53,6 +53,9 @@ cmake --workflow --preset asan
   --repo . \
   --dry-run
 
+./build/release-cuda/apps/cli/llcl-cli index \
+  --config configs/default.json --repo .
+
 ./build/release-cuda/apps/cli/llcl-cli ask \
   --config configs/default.json --repo . \
   "Where is the vector index implemented?"
@@ -67,6 +70,10 @@ cmake --workflow --preset asan
 `scan` 不加载模型；它按 `index.chunk_lines`、`index.overlap_lines` 和
 `index.max_file_bytes` 扫描仓库并报告文件/Chunk 统计。可重复使用 `--include` 与 `--exclude`
 添加或排除相对路径 glob。
+
+`index` 使用 embedding 模型把索引写入 `index.data_dir`（默认 `var/index`）。元数据保存在
+SQLite，向量保存在带版本号的二进制快照中；重复执行只会重新 embedding 新增或内容发生改变的文件。
+模型标识或向量维度不一致时命令会拒绝加载旧索引，避免静默混用向量空间。
 
 `ask` 当前是内存式 RAG：每次调用都会重新扫描、切块和 embedding，因此结果不依赖旧索引；回答
 必须使用 `[S1]` 等引用，命令末尾会列出对应的文件和行号。
