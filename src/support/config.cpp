@@ -103,6 +103,15 @@ using Json = nlohmann::json;
   result.hnsw_ef_search = read_size(*iterator, "hnsw_ef_search", result.hnsw_ef_search);
   result.reranker_enabled = read_bool(*iterator, "reranker_enabled", result.reranker_enabled);
   result.rerank_candidates = read_size(*iterator, "rerank_candidates", result.rerank_candidates);
+  result.semantic_index_enabled =
+      read_bool(*iterator, "semantic_index_enabled", result.semantic_index_enabled);
+  if (const auto compilation_database_dir = iterator->find("compilation_database_dir");
+      compilation_database_dir != iterator->end()) {
+    if (!compilation_database_dir->is_string()) {
+      throw std::invalid_argument("index.compilation_database_dir must be a string");
+    }
+    result.compilation_database_dir = compilation_database_dir->get<std::string>();
+  }
   return result;
 }
 
@@ -174,6 +183,10 @@ void validate_config(const AppConfig& config) {
   }
   if (config.index.rerank_candidates < 20 || config.index.rerank_candidates > 50) {
     throw std::invalid_argument("index.rerank_candidates must be in [20, 50]");
+  }
+  if (config.index.semantic_index_enabled && config.index.compilation_database_dir.empty()) {
+    throw std::invalid_argument(
+        "index.compilation_database_dir must not be empty when semantic indexing is enabled");
   }
   if (config.log_level != "trace" && config.log_level != "debug" && config.log_level != "info" &&
       config.log_level != "warn" && config.log_level != "error" && config.log_level != "critical" &&

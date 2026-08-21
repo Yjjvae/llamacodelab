@@ -4,11 +4,13 @@
 #include "adapters/llama/llama_runtime.hpp"
 #include "adapters/sqlite/fts_search.hpp"
 #include "adapters/sqlite/sqlite_chunk_repository.hpp"
+#include "adapters/sqlite/sqlite_symbol_repository.hpp"
 #include "llamacodelab/application/ask_service.hpp"
 #include "llamacodelab/application/context_budget.hpp"
 #include "llamacodelab/application/generation_queue.hpp"
 #include "llamacodelab/application/hybrid_retriever.hpp"
 #include "llamacodelab/application/index_service.hpp"
+#include "llamacodelab/application/symbol_graph_retriever.hpp"
 #include "llamacodelab/http/http_server.hpp"
 #include "llamacodelab/support/config.hpp"
 #include "llamacodelab/support/logging.hpp"
@@ -47,6 +49,12 @@ int main(int argc, char** argv) {
                                      config.embedding_model.path.filename().string());
     llcl::sqlite_adapter::SqliteChunkRepository chunk_repository(config.index.data_dir /
                                                                  "index.sqlite3");
+    std::optional<llcl::sqlite_adapter::SqliteSymbolRepository> symbol_repository;
+    std::optional<llcl::SymbolGraphRetriever> symbol_retriever;
+    if (config.index.semantic_index_enabled) {
+      symbol_repository.emplace(config.index.data_dir / "symbols.sqlite3");
+      symbol_retriever.emplace(*symbol_repository);
+    }
     llcl::sqlite_adapter::FtsSearch keyword_search(config.index.data_dir / "index.sqlite3");
     llcl::GenerationQueue generation_queue(4);
     (void)index_service.update(repository);
@@ -62,7 +70,8 @@ int main(int argc, char** argv) {
                 if (snapshot == nullptr) {
                   throw std::runtime_error("repository index has not been built");
                 }
-                llcl::HybridRetriever retriever(embedder, *snapshot, keyword_search);
+                llcl::HybridRetriever retriever(embedder, *snapshot, keyword_search, {},
+                                                symbol_retriever ? &*symbol_retriever : nullptr);
                 const auto hits = retriever.retrieve(question, top_k);
                 std::vector<llcl::ChunkId> ids;
                 ids.reserve(hits.size());
@@ -84,7 +93,8 @@ int main(int argc, char** argv) {
                                              .reserved_output_tokens = 512,
                                              .safety_margin_tokens = 64};
                 llcl::GenerationOptions options{.max_tokens = 512};
-                llcl::HybridRetriever retriever(embedder, *snapshot, keyword_search);
+                llcl::HybridRetriever retriever(embedder, *snapshot, keyword_search, {},
+                                                symbol_retriever ? &*symbol_retriever : nullptr);
                 llcl::AskService service(retriever, chunk_repository, context_budget, generator,
                                          options, budget,
                                          {.reranker = reranker ? &*reranker : nullptr,

@@ -1,12 +1,12 @@
 # LlamaCodeLab
 
-一个基于 llama.cpp 的本地 C++ 代码库智能助手。目前完成到 M9：
+一个基于 llama.cpp 的本地 C++ 代码库智能助手。目前完成到 M10：
 工程骨架、真实 GGUF 的 CPU/CUDA 流式推理、多轮消息、安全的仓库扫描、持久化向量检索、SQLite FTS5/RRF
-混合检索和本地 HTTP/SSE 服务。
+混合检索、本地 HTTP/SSE 服务，以及可选的 Clang AST 语义索引和符号图检索。
 
 ## Status
 
-M0–M9 已完成。`ask` 会临时扫描仓库、检索相关 Chunk，以真实 tokenizer 预算构造防注入 RAG
+M0–M10 已完成。`ask` 会临时扫描仓库、检索相关 Chunk，以真实 tokenizer 预算构造防注入 RAG
 提示词，并输出带源文件和行号的引用；`index` 构建可增量更新的持久化索引；`llcl-server` 提供 HTTP/SSE API。
 
 ## Requirements
@@ -17,6 +17,7 @@ M0–M9 已完成。`ask` 会临时扫描仓库、检索相关 Chunk，以真实
 - Git（需初始化 `third_party/llama.cpp` 子模块）
 - Ninja、ccache
 - GPU 构建：CUDA Toolkit 13.3（Ubuntu 26.04）
+- 可选语义索引：LLVM/Clang 开发包（例如 Ubuntu 的 `llvm-21-dev libclang-21-dev`）
 
 ## Bootstrap
 
@@ -104,11 +105,33 @@ SQLite，向量保存在带版本号的二进制快照中；重复执行只会�
 配置示例使用 Qwen2.5-Coder-1.5B-Instruct Q4_K_M。模型下载和校验方式见
 [models/README.md](models/README.md)。
 
+若要按函数、类、调用与继承关系构建语义索引，先为待索引仓库生成
+`build/compile_commands.json`，再以 Clang adapter 配置本项目：
+
+```bash
+cmake -S . -B build/clang -G Ninja \
+  -DLLCL_ENABLE_CLANG=ON \
+  -DLLVM_DIR=/usr/lib/llvm-21/lib/cmake/llvm \
+  -DClang_DIR=/usr/lib/llvm-21/lib/cmake/clang
+cmake --build build/clang
+```
+
+然后将配置中的 `index.semantic_index_enabled` 设为 `true`，并用
+`index.compilation_database_dir` 指向被索引仓库内、相对仓库根目录的编译数据库目录（默认 `build`）。
+对 `Foo::bar` 的精确查询会合并定义及一跳调用/继承关系；解析失败的翻译单元自动回退为文本切块，
+不会中断整个索引。
+
 ## Verification
 
 ```bash
 ./scripts/quality.sh --preset dev
 cmake --workflow --preset asan-make
+```
+
+Clang adapter 的本地验收：
+
+```bash
+ctest --test-dir build/clang -R ClangCodeParser --output-on-failure
 ```
 
 The quality script verifies format, build, unit tests, and `clang-tidy`. GitHub Actions repeats

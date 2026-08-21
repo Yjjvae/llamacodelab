@@ -78,6 +78,14 @@ selected preset, runs its tests, then runs `clang-tidy` for project `.cpp` files
 ./scripts/quality.sh --preset dev
 ```
 
+`src/adapters/clang/` is intentionally excluded from the default gate because it is compiled only
+with `LLCL_ENABLE_CLANG=ON`. When changing that adapter, configure a Clang-enabled build and run
+its parser tests in addition to the default gate:
+
+```bash
+ctest --test-dir build/clang -R ClangCodeParser --output-on-failure
+```
+
 Use `./scripts/format.sh` to apply formatting, or `./scripts/format.sh --check` in a non-mutating
 check. After changing compiler flags or a preset, run `cmake --preset dev` before
 `./scripts/tidy.sh dev` so that its compilation database is fresh.

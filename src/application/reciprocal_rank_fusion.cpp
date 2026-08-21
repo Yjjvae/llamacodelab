@@ -16,14 +16,25 @@ std::vector<SearchHit> reciprocal_rank_fuse(const std::vector<SearchHit>& vector
   if (rank_constant == 0) {
     throw std::invalid_argument("RRF rank constant must be positive");
   }
+  const std::vector<std::vector<SearchHit>> lists{vector_hits, keyword_hits};
+  return reciprocal_rank_fuse(lists, top_k, rank_constant);
+}
+
+std::vector<SearchHit>
+reciprocal_rank_fuse(const std::span<const std::vector<SearchHit>> ranked_lists,
+                     const std::size_t top_k, const std::size_t rank_constant) {
+  if (top_k == 0)
+    return {};
+  if (rank_constant == 0)
+    throw std::invalid_argument("RRF rank constant must be positive");
   std::unordered_map<ChunkId, float> scores;
   const auto accumulate = [&scores, rank_constant](const std::vector<SearchHit>& hits) {
     for (std::size_t index = 0; index < hits.size(); ++index) {
       scores[hits[index].chunk_id] += 1.0F / static_cast<float>(rank_constant + index + 1U);
     }
   };
-  accumulate(vector_hits);
-  accumulate(keyword_hits);
+  for (const auto& hits : ranked_lists)
+    accumulate(hits);
   std::vector<SearchHit> fused;
   fused.reserve(scores.size());
   for (const auto& [chunk_id, score] : scores) {
