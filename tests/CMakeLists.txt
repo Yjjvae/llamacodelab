@@ -10,11 +10,13 @@ add_executable(
   unit/text_chunker_test.cpp
   unit/similarity_test.cpp
   unit/brute_force_index_test.cpp
+  unit/hnsw_index_test.cpp
   unit/context_budget_test.cpp
   unit/ask_service_test.cpp
   unit/vector_file_test.cpp
   unit/generation_queue_test.cpp
   integration/incremental_index_test.cpp
+  integration/hnsw_recall_test.cpp
   integration/http_api_test.cpp
 )
 target_include_directories(llcl_unit_tests PRIVATE "${PROJECT_SOURCE_DIR}/tests")

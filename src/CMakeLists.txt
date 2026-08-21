@@ -36,6 +36,7 @@ add_library(
   llcl_retrieval
   STATIC
   adapters/vector/brute_force_index.cpp
+  adapters/vector/hnsw_index.cpp
   adapters/vector/vector_file.cpp
   adapters/memory/in_memory_chunk_repository.cpp
   adapters/sqlite/sqlite_chunk_repository.cpp
@@ -46,7 +47,11 @@ target_include_directories(
     "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>"
   PRIVATE "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src>"
 )
-target_link_libraries(llcl_retrieval PUBLIC llcl_domain PRIVATE SQLite::SQLite3)
+target_link_libraries(
+  llcl_retrieval
+  PUBLIC llcl_domain
+  PRIVATE SQLite::SQLite3 hnswlib::hnswlib nlohmann_json::nlohmann_json
+)
 llcl_set_project_warnings(llcl_retrieval)
 llcl_enable_sanitizers(llcl_retrieval)
 

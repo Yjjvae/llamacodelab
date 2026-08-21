@@ -35,6 +35,14 @@ FetchContent_Declare(
   DOWNLOAD_EXTRACT_TIMESTAMP TRUE
 )
 
+FetchContent_Declare(
+  hnswlib
+  URL https://github.com/nmslib/hnswlib/archive/refs/tags/v0.8.0.tar.gz
+  URL_HASH SHA256=cf61d7dd8dc9bfba7f4abe0ed26698e90ac9f49a0badb2e1b0f3ba89b72cf3bb
+  DOWNLOAD_DIR "${PROJECT_SOURCE_DIR}/build/_downloads"
+  DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+)
+
 set(SPDLOG_BUILD_EXAMPLE OFF CACHE BOOL "" FORCE)
 set(SPDLOG_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(CLI11_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
@@ -45,8 +53,9 @@ set(HTTPLIB_USE_OPENSSL_IF_AVAILABLE OFF CACHE BOOL "" FORCE)
 set(HTTPLIB_USE_ZLIB_IF_AVAILABLE OFF CACHE BOOL "" FORCE)
 set(HTTPLIB_USE_BROTLI_IF_AVAILABLE OFF CACHE BOOL "" FORCE)
 set(HTTPLIB_USE_ZSTD_IF_AVAILABLE OFF CACHE BOOL "" FORCE)
+set(HNSWLIB_EXAMPLES OFF CACHE BOOL "" FORCE)
 
-FetchContent_MakeAvailable(nlohmann_json spdlog cli11 cpp_httplib)
+FetchContent_MakeAvailable(nlohmann_json spdlog cli11 cpp_httplib hnswlib)
 
 if(LLCL_BUILD_TESTS)
   FetchContent_Declare(
