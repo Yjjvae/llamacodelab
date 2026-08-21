@@ -37,7 +37,6 @@ jobs:
         run: |
           cmake --version
           ninja --version
-          ccache --version
           gcc --version
           g++ --version
           clang --version
@@ -48,8 +47,12 @@ jobs:
             echo "CC=clang" >> "$GITHUB_ENV"
             echo "CXX=clang++" >> "$GITHUB_ENV"
           fi
-      - name: Configure
-        run: cmake --preset dev
+      - name: Configure without ccache
+        run: >
+          cmake --preset dev
+          -DCMAKE_CXX_COMPILER_LAUNCHER=
+          -DCMAKE_CUDA_COMPILER_LAUNCHER=
+          -DGGML_CCACHE=OFF
       - name: Build
         run: cmake --build --preset dev
       - name: Test
@@ -66,11 +69,18 @@ jobs:
         run: |
           cmake --version
           ninja --version
-          ccache --version
           gcc --version
           g++ --version
-      - name: Configure, build, and test
-        run: cmake --workflow --preset asan
+      - name: Configure without ccache
+        run: >
+          cmake --preset asan
+          -DCMAKE_CXX_COMPILER_LAUNCHER=
+          -DCMAKE_CUDA_COMPILER_LAUNCHER=
+          -DGGML_CCACHE=OFF
+      - name: Build
+        run: cmake --build --preset asan
+      - name: Test
+        run: ctest --preset asan
 
   tidy:
     name: clang-tidy
@@ -83,10 +93,13 @@ jobs:
         run: |
           cmake --version
           ninja --version
-          ccache --version
           g++ --version
           clang-tidy --version
-      - name: Configure
-        run: cmake --preset dev
+      - name: Configure without ccache
+        run: >
+          cmake --preset dev
+          -DCMAKE_CXX_COMPILER_LAUNCHER=
+          -DCMAKE_CUDA_COMPILER_LAUNCHER=
+          -DGGML_CCACHE=OFF
       - name: Check project sources
         run: ./scripts/tidy.sh dev
