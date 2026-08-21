@@ -7,9 +7,9 @@
 
 - 日期：2026-08-22（Asia/Shanghai）
 - 教程进度：第 10–18 章，即 M0–M8
-- 项目版本：`0.8.0`（待 M8 PR 合并后发布）
+- 项目版本：`0.8.1`（M7、M8 已完成；本次为 Worklog 补丁发布）
 - 结论：M8 已实现本地 HTTP/SSE API、有限生成队列、健康检查与 Prometheus 指标入口
-- Git：M7 已通过 PR #12 合并并发布 `v0.7.0`
+- Git：M7/M8 已分别通过 PR #12/#13 合并；已发布 `v0.7.0` 与 `v0.8.0`
 
 | 里程碑 | 状态 | 可验证结果 |
 |---|---|---|
@@ -90,6 +90,19 @@
   多角色历史；自动应用模板与 token 预算。`generate` 同样支持 top-k 和 repeat penalty。
 - 每个生成请求记录 request id、模型、prompt token 数、TTFT、输出 token 数和结束原因。
 
+### 2026-08-22 — M7 持久化索引
+
+- 增加 SQLite `documents`、`chunks` 与 `index_metadata` 表，保存文件内容 hash、切块数据、索引格式版本、
+  embedding 模型标识、维度、归一化方式和活动向量代际。
+- 增加带 `LLCLVEC1` 头部的版本化二进制向量文件；写入使用临时文件、`fsync` 和原子改名，读取会校验
+  magic、版本、维度、记录数和截断情况。
+- 增加 `IndexService`：只对新增或内容变更的文件进行 embedding，删除已消失文件的 Chunk；数据库提交成功后
+  才发布不可变检索快照，并在模型标识或维度变化时拒绝混用旧索引。
+- 新增 `llcl-cli index --config --repo`、索引格式 ADR、向量文件测试和增量索引集成测试。
+- 验证：`./scripts/quality.sh --preset dev` 通过；40 项测试通过，6 项未配置真实模型的测试按设计跳过。
+- 交付：PR #12 合并至 `main`；GitHub Actions 的 format、GCC、Clang、ASan/UBSan、clang-tidy 全部通过；
+  标签与 Release 为 `v0.7.0`。
+
 ### 2026-08-22 — M8 HTTP/SSE 服务
 
 - 固定 `cpp-httplib` v0.20.0 归档和 SHA-256；HTTP 依赖仅出现在适配器层与 `llcl-server`。
@@ -99,8 +112,11 @@
   新任务并向正在执行的任务传递 stop token。
 - `/v1/chat/completions` 复用 `AskService`：常规请求返回最小 OpenAI 风格 JSON，`stream: true` 发送
   `token`、`citations`、`metrics` 和 `done` SSE 事件。
-- 本机验证：42 个测试通过或按模型环境跳过；HTTP 集成测试在回环端口验证 health/readiness、request ID、
+- CI 修复：cpp-httplib 在 GitHub runner 上发现不完整 zstd CMake target；禁用本里程碑不需要的 TLS/压缩
+  可选集成，使依赖解析可复现。
+- 本机验证：43 个测试通过或按模型环境跳过；HTTP 集成测试在回环端口验证 health/readiness、request ID、
   JSON chat 与 SSE。受当前沙箱限制，监听回环端口的测试以本机授权运行方式执行。
+- 交付：PR #13 合并至 `main`；五项 GitHub Actions 检查全部通过；标签与 Release 为 `v0.8.0`。
 
 ## 固定依赖
 
