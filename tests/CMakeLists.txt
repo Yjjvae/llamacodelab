@@ -16,6 +16,7 @@ add_executable(
   unit/llama_reranker_test.cpp
   unit/reciprocal_rank_fusion_test.cpp
   unit/context_budget_test.cpp
+  unit/evaluation_test.cpp
   unit/ask_service_test.cpp
   unit/vector_file_test.cpp
   unit/generation_queue_test.cpp

@@ -1,0 +1,3 @@
+{"query_id":"raii-definition","relevance":[{"path":"docs/IMPLEMENTATION_GUIDE.md","grade":3}]}
+{"query_id":"vector-index","relevance":[{"path":"src/adapters/vector/brute_force_index.cpp","grade":3},{"path":"include/llamacodelab/domain/retrieval.hpp","grade":1}]}
+{"query_id":"symbol-callers","relevance":[{"path":"src/application/symbol_graph_retriever.cpp","grade":3},{"path":"include/llamacodelab/domain/symbol.hpp","grade":2}]}

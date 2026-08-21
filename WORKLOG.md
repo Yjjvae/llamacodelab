@@ -6,10 +6,10 @@
 ## 当前状态
 
 - 日期：2026-08-22（Asia/Shanghai）
-- 教程进度：第 10–20 章，即 M0–M10
-- 项目版本：`0.10.0`（待发布）
-- 结论：M10 已实现可选 Clang AST 语义切块、SQLite 符号图与三路 RRF 检索
-- Git：M10 使用 `feat/m10-symbol-graph` 聚焦分支，待通过 CI 后创建 PR
+- 教程进度：第 10–21 章，即 M0–M11
+- 项目版本：`0.11.0`（待发布）
+- 结论：M11 已实现可复现的 Chunk、检索和推理 Benchmark 基础设施
+- Git：M11 使用 `perf/m11-benchmarks` 聚焦分支，待通过 CI 后创建 PR
 
 | 里程碑 | 状态 | 可验证结果 |
 |---|---|---|
@@ -27,6 +27,7 @@
 | M8 HTTP/SSE 服务 | 完成 | 路由、SSE、4 槽生成队列、健康检查、指标与回环集成测试 |
 | M9 高级检索 | 完成 | HNSW、FTS5/BM25、RRF、可选 rerank 与回退路径 |
 | M10 语义索引 | 完成 | Clang AST Chunk、符号/边持久化、符号图一跳检索与文本 fallback |
+| M11 评测与性能 | 完成 | 固定 seed 基准、检索指标、环境快照、报告模板与 CPU/CUDA 对比流程 |
 
 ## 本次实现范围
 
@@ -130,6 +131,17 @@
   “who calls …”/“调用 …”查询优先走调用者入边。
 - 验证：默认质量门禁 54 项测试通过（6 项真实模型测试按环境跳过）；LLVM 21 可选构建中 4 项
   `ClangCodeParser` 集成测试通过，覆盖定义行、继承/调用、模板、override、宏展开与无效源文件 fallback。
+
+### 2026-08-22 — M11 评测、Benchmark 与 CUDA 优化流程
+
+- 新增可单测的 `Recall@K`、MRR、nDCG 与 nearest-rank percentile 指标。检索基准固定随机 seed，输出每个
+  `ef_search` 的 JSON Lines，包含 Recall@10、MRR@10、nDCG@10、构建时间和 p50/p95 延迟。
+- 新增 Chunk 基准和可选的真实 GGUF 推理基准。推理基准固定 greedy/seed，报告 model load、TTFT、decode
+  throughput、端到端 p50/p95 与 Linux 峰值 RSS；不伪造 GPU 显存值，运行脚本会保存 `nvidia-smi` 环境快照。
+- 提供最小问题集/检索 ground truth、`scripts/run_benchmarks.sh` 和报告模板。无 `LLCL_BENCH_MODEL` 时仅跳过
+  推理，不阻碍其余可重复基准；原始结果被 gitignore，避免将机器特定数据混入源码。
+- 验证：`EvaluationTest` 2/2 通过；Release benchmark build 成功，并以 `seed=42` 运行 Chunk 与 1,000
+  vectors/10 queries 的 HNSW 样例。真实 GPU/模型报告需按模板在插电、性能模式和至少 10 次测量下生成。
 
 ## 固定依赖
 

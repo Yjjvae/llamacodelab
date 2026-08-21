@@ -1,0 +1,3 @@
+{"id":"raii-definition","question":"Where is RAII explained?","expected_answer":"Resource lifetime is tied to object lifetime.","requires_citations":true}
+{"id":"vector-index","question":"Where is the brute-force vector index implemented?","expected_answer":"src/adapters/vector/brute_force_index.cpp","requires_citations":true}
+{"id":"symbol-callers","question":"Who calls demo::helper?","expected_answer":"The symbol graph should return its callers.","requires_citations":true}
