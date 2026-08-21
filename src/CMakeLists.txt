@@ -36,7 +36,9 @@ add_library(
   llcl_retrieval
   STATIC
   adapters/vector/brute_force_index.cpp
+  adapters/vector/vector_file.cpp
   adapters/memory/in_memory_chunk_repository.cpp
+  adapters/sqlite/sqlite_chunk_repository.cpp
 )
 target_include_directories(
   llcl_retrieval
@@ -44,7 +46,7 @@ target_include_directories(
     "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>"
   PRIVATE "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src>"
 )
-target_link_libraries(llcl_retrieval PUBLIC llcl_domain)
+target_link_libraries(llcl_retrieval PUBLIC llcl_domain PRIVATE SQLite::SQLite3)
 llcl_set_project_warnings(llcl_retrieval)
 llcl_enable_sanitizers(llcl_retrieval)
 
@@ -55,12 +57,13 @@ add_library(
   application/prompt_builder.cpp
   application/context_budget.cpp
   application/ask_service.cpp
+  application/index_service.cpp
 )
 target_include_directories(
   llcl_application
   PUBLIC "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>"
 )
-target_link_libraries(llcl_application PUBLIC llcl_domain)
+target_link_libraries(llcl_application PUBLIC llcl_domain llcl_ingestion llcl_retrieval llcl_support)
 llcl_set_project_warnings(llcl_application)
 llcl_enable_sanitizers(llcl_application)
 
