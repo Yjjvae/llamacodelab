@@ -1,12 +1,12 @@
 # LlamaCodeLab
 
-一个基于 llama.cpp 的本地 C++ 代码库智能助手。目前完成到 M10：
+一个基于 llama.cpp 的本地 C++ 代码库智能助手。目前完成到 M11：
 工程骨架、真实 GGUF 的 CPU/CUDA 流式推理、多轮消息、安全的仓库扫描、持久化向量检索、SQLite FTS5/RRF
-混合检索、本地 HTTP/SSE 服务，以及可选的 Clang AST 语义索引和符号图检索。
+混合检索、本地 HTTP/SSE 服务、可选的 Clang AST 语义索引和符号图检索，以及可复现的性能评测。
 
 ## Status
 
-M0–M10 已完成。`ask` 会临时扫描仓库、检索相关 Chunk，以真实 tokenizer 预算构造防注入 RAG
+M0–M11 已完成。`ask` 会临时扫描仓库、检索相关 Chunk，以真实 tokenizer 预算构造防注入 RAG
 提示词，并输出带源文件和行号的引用；`index` 构建可增量更新的持久化索引；`llcl-server` 提供 HTTP/SSE API。
 
 ## Requirements
@@ -152,12 +152,22 @@ LLCL_TEST_EMBEDDING_MODEL="$PWD/models/nomic-embed-text-v1.5-q4_k_m.gguf" \
   ctest --test-dir build/dev -R EmbeddingSmokeTest --output-on-failure
 ```
 
-可选的检索微基准会比较暴力检索与 HNSW 的 build 时间、p50/p95 查询延迟和 Recall@10：
+M11 将系统性能、检索质量和回答质量分开评测。基准输出 JSON，固定 seed；原始结果会保存在
+`benchmarks/results/`（已忽略），环境信息和报告填写方式见 [benchmark-report.md](docs/benchmark-report.md)。
+
+```bash
+./scripts/run_benchmarks.sh
+```
+
+无模型时脚本仍会运行 Chunk 与检索基准；设置 `LLCL_BENCH_MODEL` 后才运行推理基准。对 CPU/CUDA 做公平
+对比时，必须使用相同 prompt、输出 token 上限、seed 与测量次数；报告 p50/p95，而不是最优单次结果。
+
+也可单独运行检索基准：
 
 ```bash
 cmake -S . -B build/bench -G Ninja -DLLCL_BUILD_BENCHMARKS=ON
 cmake --build build/bench --target llcl_retrieval_benchmark
-./build/bench/benchmarks/llcl_retrieval_benchmark
+./build/bench/benchmarks/llcl_retrieval_benchmark 10000 200 42
 ```
 
 ## Documentation

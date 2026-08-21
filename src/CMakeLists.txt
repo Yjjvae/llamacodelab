@@ -1,4 +1,4 @@
-add_library(llcl_domain STATIC domain/similarity.cpp)
+add_library(llcl_domain STATIC domain/evaluation.cpp domain/similarity.cpp)
 target_include_directories(
   llcl_domain
   PUBLIC "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>"
