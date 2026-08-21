@@ -123,7 +123,7 @@ LLCL_TEST_EMBEDDING_MODEL="$PWD/models/nomic-embed-text-v1.5-q4_k_m.gguf" \
   ctest --test-dir build/dev -R EmbeddingSmokeTest --output-on-failure
 ```
 
-可选的检索微基准：
+可选的检索微基准会比较暴力检索与 HNSW 的 build 时间、p50/p95 查询延迟和 Recall@10：
 
 ```bash
 cmake -S . -B build/bench -G Ninja -DLLCL_BUILD_BENCHMARKS=ON
