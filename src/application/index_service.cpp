@@ -3,13 +3,19 @@
 #include "adapters/filesystem/file_scanner.hpp"
 #include "adapters/filesystem/text_chunker.hpp"
 #include "adapters/sqlite/sqlite_chunk_repository.hpp"
+#include "adapters/sqlite/sqlite_symbol_repository.hpp"
 #include "adapters/vector/brute_force_index.hpp"
 #include "adapters/vector/hnsw_index.hpp"
 #include "adapters/vector/vector_file.hpp"
 #include "llamacodelab/support/hash.hpp"
 
+#ifdef LLCL_HAS_CLANG
+#include "adapters/clang/clang_code_parser.hpp"
+#endif
+
 #include <chrono>
 #include <fstream>
+#include <spdlog/spdlog.h>
 #include <stdexcept>
 #include <unordered_map>
 #include <unordered_set>
@@ -70,6 +76,17 @@ IndexUpdateResult IndexService::update(const std::filesystem::path& repository_r
     }
   }
   sqlite_adapter::SqliteChunkRepository repository(config_.data_dir / "index.sqlite3");
+#ifdef LLCL_HAS_CLANG
+  std::optional<sqlite_adapter::SqliteSymbolRepository> symbol_repository;
+  if (config_.semantic_index_enabled) {
+    symbol_repository.emplace(config_.data_dir / "symbols.sqlite3");
+  }
+#else
+  if (config_.semantic_index_enabled) {
+    spdlog::warn(
+        "semantic indexing requested but this build has no Clang adapter; using text chunks");
+  }
+#endif
   const auto model_hash = stable_hash_hex(embedding_model_id_);
   const auto existing_model_hash = repository.metadata("embedding_model_sha256");
   if (!existing_model_hash.empty() && existing_model_hash != model_hash) {
@@ -106,6 +123,14 @@ IndexUpdateResult IndexService::update(const std::filesystem::path& repository_r
   std::unordered_set<std::string> present;
   IndexUpdateResult result;
   std::vector<sqlite_adapter::StoredDocument> replacements;
+#ifdef LLCL_HAS_CLANG
+  struct SymbolReplacement {
+    std::filesystem::path relative_path;
+    std::vector<Symbol> symbols;
+    std::vector<SymbolEdge> edges;
+  };
+  std::vector<SymbolReplacement> symbol_replacements;
+#endif
   filesystem_adapter::TextChunker chunker;
   const filesystem_adapter::ChunkingOptions chunking{.max_lines = config_.chunk_lines,
                                                      .overlap_lines = config_.overlap_lines};
@@ -127,6 +152,29 @@ IndexUpdateResult IndexService::update(const std::filesystem::path& repository_r
       }
     }
     auto chunks = chunker.chunk_file(file, chunking);
+    std::string parser_version{"text-v1"};
+#ifdef LLCL_HAS_CLANG
+    if (symbol_repository.has_value() && file.language == "cpp") {
+      const auto database_directory = config_.compilation_database_dir.is_absolute()
+                                          ? config_.compilation_database_dir
+                                          : repository_root / config_.compilation_database_dir;
+      const clang_adapter::ClangCodeParser parser(database_directory);
+      auto parsed = parser.parse(file.absolute_path, repository_root);
+      if (parsed.success && !parsed.semantic_chunks.empty()) {
+        chunks = std::move(parsed.semantic_chunks);
+        parser_version = "clang-ast-v1";
+        symbol_replacements.push_back({.relative_path = file.relative_path,
+                                       .symbols = std::move(parsed.symbols),
+                                       .edges = std::move(parsed.edges)});
+      } else {
+        const auto diagnostic =
+            parsed.diagnostics.empty() ? "no semantic chunks produced" : parsed.diagnostics.front();
+        spdlog::warn("AST parse fallback for {}: {}", file.relative_path.string(), diagnostic);
+        symbol_replacements.push_back(
+            {.relative_path = file.relative_path, .symbols = {}, .edges = {}});
+      }
+    }
+#endif
     std::vector<std::string_view> texts;
     texts.reserve(chunks.size());
     for (const auto& chunk : chunks) {
@@ -141,7 +189,7 @@ IndexUpdateResult IndexService::update(const std::filesystem::path& repository_r
                             .content_hash = hash,
                             .size_bytes = file.size_bytes,
                             .modified_ns = modified_ns(file.absolute_path),
-                            .parser_version = "text-v1",
+                            .parser_version = std::move(parser_version),
                             .chunks = std::move(chunks)});
   }
   std::vector<std::filesystem::path> removals;
@@ -190,6 +238,17 @@ IndexUpdateResult IndexService::update(const std::filesystem::path& repository_r
       repository.rollback();
       throw;
     }
+#ifdef LLCL_HAS_CLANG
+    if (symbol_repository.has_value()) {
+      for (const auto& relative_path : removals) {
+        symbol_repository->replace_file(relative_path, {}, {});
+      }
+      for (const auto& replacement : symbol_replacements) {
+        symbol_repository->replace_file(replacement.relative_path, replacement.symbols,
+                                        replacement.edges);
+      }
+    }
+#endif
   }
   std::shared_ptr<IVectorIndex> snapshot;
   if (config_.hnsw_enabled) {

@@ -41,6 +41,7 @@ add_library(
   adapters/memory/in_memory_chunk_repository.cpp
   adapters/sqlite/fts_search.cpp
   adapters/sqlite/sqlite_chunk_repository.cpp
+  adapters/sqlite/sqlite_symbol_repository.cpp
 )
 target_include_directories(
   llcl_retrieval
@@ -67,6 +68,7 @@ add_library(
   application/hybrid_retriever.cpp
   application/index_service.cpp
   application/reciprocal_rank_fusion.cpp
+  application/symbol_graph_retriever.cpp
 )
 target_include_directories(
   llcl_application
@@ -105,3 +107,33 @@ target_include_directories(
 target_link_libraries(llcl_llama PUBLIC llcl_domain PRIVATE llama ggml llcl_support)
 llcl_set_project_warnings(llcl_llama)
 llcl_enable_sanitizers(llcl_llama)
+
+if(LLCL_ENABLE_CLANG)
+  find_package(LLVM CONFIG REQUIRED)
+  find_package(Clang CONFIG REQUIRED)
+  add_library(
+    llcl_clang_adapter
+    STATIC
+    adapters/clang/clang_code_parser.cpp
+    adapters/clang/source_extractor.cpp
+    adapters/clang/symbol_visitor.cpp
+  )
+  target_include_directories(
+    llcl_clang_adapter
+    PUBLIC "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>"
+    PRIVATE "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src>"
+  )
+  target_include_directories(
+    llcl_clang_adapter
+    SYSTEM PRIVATE ${LLVM_INCLUDE_DIRS}
+  )
+  target_link_libraries(
+    llcl_clang_adapter
+    PUBLIC llcl_domain
+    PRIVATE clangAST clangBasic clangFrontend clangLex clangTooling llcl_support
+  )
+  llcl_set_project_warnings(llcl_clang_adapter)
+  llcl_enable_sanitizers(llcl_clang_adapter)
+  target_link_libraries(llcl_application PRIVATE llcl_clang_adapter)
+  target_compile_definitions(llcl_application PRIVATE LLCL_HAS_CLANG=1)
+endif()

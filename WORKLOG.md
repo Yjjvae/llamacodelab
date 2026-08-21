@@ -6,10 +6,10 @@
 ## 当前状态
 
 - 日期：2026-08-22（Asia/Shanghai）
-- 教程进度：第 10–19 章，即 M0–M9
-- 项目版本：`0.9.0`（已发布）
-- 结论：M9 已实现 HNSW、FTS5/BM25 + RRF 混合检索和可选本地生成式重排
-- Git：M8 已发布 `v0.8.0`；M9 按 HNSW、混合检索和重排三个聚焦 PR 交付
+- 教程进度：第 10–20 章，即 M0–M10
+- 项目版本：`0.10.0`（待发布）
+- 结论：M10 已实现可选 Clang AST 语义切块、SQLite 符号图与三路 RRF 检索
+- Git：M10 使用 `feat/m10-symbol-graph` 聚焦分支，待通过 CI 后创建 PR
 
 | 里程碑 | 状态 | 可验证结果 |
 |---|---|---|
@@ -26,6 +26,7 @@
 | M7 持久化索引 | 完成 | SQLite 元数据、原子向量快照、增量 embedding 和 `index` CLI |
 | M8 HTTP/SSE 服务 | 完成 | 路由、SSE、4 槽生成队列、健康检查、指标与回环集成测试 |
 | M9 高级检索 | 完成 | HNSW、FTS5/BM25、RRF、可选 rerank 与回退路径 |
+| M10 语义索引 | 完成 | Clang AST Chunk、符号/边持久化、符号图一跳检索与文本 fallback |
 
 ## 本次实现范围
 
@@ -116,6 +117,19 @@
   可重复的流程验证，真实模型的质量与延迟仍应使用目标仓库的标注查询集重新测量。
 - 验证：`./scripts/quality.sh --preset dev` 通过（50 项通过、6 项真实模型测试按环境跳过）；刷新后的
   `ctest --test-dir build/asan --output-on-failure` 同样为 50 项通过、6 项跳过，未报告 ASan/UBSan 问题。
+
+### 2026-08-22 — M10 Clang AST 语义索引与符号图
+
+- 新增可选 `LLCL_ENABLE_CLANG` 构建开关；LLVM/Clang 仅在开启时发现和链接，普通 CPU/CUDA 构建不增加
+  依赖。`IndexConfig` 新增 `semantic_index_enabled` 与 `compilation_database_dir`，默认关闭且使用文本索引。
+- LibTooling 从 compilation database 解析翻译单元，抽取函数、方法、构造/析构、类/结构、枚举、调用、继承
+  和 override；函数与类定义生成带 qualified name、签名和源码范围的 `clang-ast-v1` 语义 Chunk。
+- `symbols.sqlite3` 用独立 SQLite schema 持久化符号与有向关系，按源文件原子替换，支持精确符号、入边和
+  出边查询。AST 失败时记录诊断、清除过期符号并回退为 `text-v1` Chunk，不会中断其余文件。
+- 服务端将精确限定名及一跳调用/继承命中作为第三个候选列表，与向量和 FTS5/BM25 通过通用 RRF 融合；
+  “who calls …”/“调用 …”查询优先走调用者入边。
+- 验证：默认质量门禁 54 项测试通过（6 项真实模型测试按环境跳过）；LLVM 21 可选构建中 4 项
+  `ClangCodeParser` 集成测试通过，覆盖定义行、继承/调用、模板、override、宏展开与无效源文件 fallback。
 
 ## 固定依赖
 

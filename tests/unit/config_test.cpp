@@ -54,7 +54,9 @@ TEST(ConfigTest, LoadsCompleteJson) {
           "hnsw_enabled": true,
           "hnsw_ef_search": 128,
           "reranker_enabled": true,
-          "rerank_candidates": 24
+          "rerank_candidates": 24,
+          "semantic_index_enabled": true,
+          "compilation_database_dir": "out/compile-db"
         },
         "log_level": "debug"
       })");
@@ -75,6 +77,8 @@ TEST(ConfigTest, LoadsCompleteJson) {
   EXPECT_EQ(config.index.hnsw_ef_search, 128U);
   EXPECT_TRUE(config.index.reranker_enabled);
   EXPECT_EQ(config.index.rerank_candidates, 24U);
+  EXPECT_TRUE(config.index.semantic_index_enabled);
+  EXPECT_EQ(config.index.compilation_database_dir, "out/compile-db");
   EXPECT_EQ(config.log_level, "debug");
 }
 
@@ -87,6 +91,8 @@ TEST(ConfigTest, UsesDefaultsForOptionalFields) {
   EXPECT_EQ(config.generation_model.batch_size, 512U);
   EXPECT_EQ(config.embedding_model.path, "model.gguf");
   EXPECT_EQ(config.index.chunk_lines, 80U);
+  EXPECT_FALSE(config.index.semantic_index_enabled);
+  EXPECT_EQ(config.index.compilation_database_dir, "build");
   EXPECT_EQ(config.log_level, "info");
 }
 

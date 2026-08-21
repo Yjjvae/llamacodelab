@@ -22,7 +22,9 @@
     "hnsw_enabled": false,
     "hnsw_ef_search": 256,
     "reranker_enabled": false,
-    "rerank_candidates": 30
+    "rerank_candidates": 30,
+    "semantic_index_enabled": false,
+    "compilation_database_dir": "build"
   },
   "log_level": "info"
 }

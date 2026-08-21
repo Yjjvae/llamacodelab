@@ -24,7 +24,9 @@ if [[ ! -f "$compile_commands" ]]; then
 fi
 
 mapfile -d '' files < <(
-  find apps src -type f -name '*.cpp' -print0
+  find apps src \
+    -path 'src/adapters/clang' -prune -o \
+    -type f -name '*.cpp' -print0
 )
 
 gcc_version="$(g++ -dumpversion)"

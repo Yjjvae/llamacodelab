@@ -11,6 +11,8 @@ add_executable(
   unit/similarity_test.cpp
   unit/brute_force_index_test.cpp
   unit/hnsw_index_test.cpp
+  unit/sqlite_symbol_repository_test.cpp
+  unit/symbol_graph_retriever_test.cpp
   unit/llama_reranker_test.cpp
   unit/reciprocal_rank_fusion_test.cpp
   unit/context_budget_test.cpp
@@ -30,6 +32,21 @@ target_link_libraries(
 llcl_set_project_warnings(llcl_unit_tests)
 llcl_enable_sanitizers(llcl_unit_tests)
 gtest_discover_tests(llcl_unit_tests)
+
+if(LLCL_ENABLE_CLANG)
+  add_executable(llcl_clang_tests integration/clang_parser_test.cpp)
+  target_include_directories(
+    llcl_clang_tests
+    PRIVATE "${PROJECT_SOURCE_DIR}/tests" "${PROJECT_SOURCE_DIR}/src"
+  )
+  target_link_libraries(
+    llcl_clang_tests
+    PRIVATE GTest::gtest_main llcl_application llcl_clang_adapter llcl_retrieval llcl_support
+  )
+  llcl_set_project_warnings(llcl_clang_tests)
+  llcl_enable_sanitizers(llcl_clang_tests)
+  gtest_discover_tests(llcl_clang_tests)
+endif()
 
 if(LLCL_BUILD_MODEL_TESTS)
   add_executable(

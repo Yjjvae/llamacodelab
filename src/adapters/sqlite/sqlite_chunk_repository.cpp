@@ -156,7 +156,7 @@ std::vector<Chunk> SqliteChunkRepository::get_many(const std::span<const ChunkId
   result.reserve(ids.size());
   Statement statement(
       database_,
-      R"(SELECT d.relative_path,c.start_line,c.end_line,c.language,c.content,c.content_hash
+      R"(SELECT d.relative_path,c.start_line,c.end_line,c.language,c.content,c.content_hash,d.parser_version
     FROM chunks c JOIN documents d ON d.id=c.document_id WHERE c.id=?;)");
   for (const auto id : ids) {
     sqlite3_reset(statement.get());
@@ -173,7 +173,8 @@ std::vector<Chunk> SqliteChunkRepository::get_many(const std::span<const ChunkId
            .language = reinterpret_cast<const char*>(sqlite3_column_text(statement.get(), 3)),
            .content = reinterpret_cast<const char*>(sqlite3_column_text(statement.get(), 4)),
            .content_hash = reinterpret_cast<const char*>(sqlite3_column_text(statement.get(), 5)),
-           .chunker_version = "text-v1"});
+           .chunker_version =
+               reinterpret_cast<const char*>(sqlite3_column_text(statement.get(), 6))});
     }
   }
   return result;
@@ -199,8 +200,9 @@ std::vector<StoredDocument> SqliteChunkRepository::documents() const {
 std::vector<Chunk>
 SqliteChunkRepository::chunks_for_document(const std::filesystem::path& relative_path) const {
   std::vector<Chunk> result;
-  Statement statement(database_,
-                      R"(SELECT c.id,c.start_line,c.end_line,c.language,c.content,c.content_hash
+  Statement statement(
+      database_,
+      R"(SELECT c.id,c.start_line,c.end_line,c.language,c.content,c.content_hash,d.parser_version
     FROM chunks c JOIN documents d ON d.id=c.document_id WHERE d.relative_path=? ORDER BY c.id;)");
   bind_text(statement.get(), 1, relative_path.generic_string());
   while (sqlite3_step(statement.get()) == SQLITE_ROW) {
@@ -212,7 +214,7 @@ SqliteChunkRepository::chunks_for_document(const std::filesystem::path& relative
         .language = reinterpret_cast<const char*>(sqlite3_column_text(statement.get(), 3)),
         .content = reinterpret_cast<const char*>(sqlite3_column_text(statement.get(), 4)),
         .content_hash = reinterpret_cast<const char*>(sqlite3_column_text(statement.get(), 5)),
-        .chunker_version = "text-v1",
+        .chunker_version = reinterpret_cast<const char*>(sqlite3_column_text(statement.get(), 6)),
     });
   }
   return result;

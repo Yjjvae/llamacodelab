@@ -26,6 +26,8 @@ struct IndexConfig {
   std::size_t hnsw_ef_search{256};
   bool reranker_enabled{false};
   std::size_t rerank_candidates{30};
+  bool semantic_index_enabled{false};
+  std::filesystem::path compilation_database_dir{"build"};
 };
 
 struct AppConfig {
