@@ -7,7 +7,7 @@
 
 - 日期：2026-08-19（Asia/Shanghai）
 - 教程进度：第 10–16 章，即 M0–M6
-- 项目版本：`0.6.0`（M6 已发布）
+- 项目版本：`0.6.1`（M6 补丁版本已发布）
 - 结论：M6 已把检索、token 预算提示词、流式生成和结构化引用接入 `ask` CLI
 - Git：M2–M6 已通过 PR #1/#2/#3/#6/#7 合并；标签和 Release 为 `v0.2.0` 至 `v0.6.0`
 
@@ -263,6 +263,15 @@ LLCL_TEST_GPU_LAYERS=-1 LLCL_TEST_REPEAT=20 \
 把检索结果按真实 tokenizer 的预算组装为带引用的 RAG prompt，并提供 `ask` CLI。
 
 ## 日期记录
+
+### 2026-08-22 — v0.6.1 CI 与 embedding batch 修复
+
+- 公开仓库并恢复 GitHub Actions 的 PR/main 自动触发；公开仓库的标准 GitHub-hosted runner 不消耗
+  私有仓库的 Actions 付费额度。
+- CI 在 GitHub runner 上显式禁用未预装的 `ccache`，本地 preset 保持原有缓存行为。
+- 显式初始化 llama.cpp embedding batch 的所有字段并检查分配结果，消除 clang-tidy 对 C API 分配契约的
+  误报，同时加强异常路径处理。
+- GitHub Actions 的 format、GCC、Clang、ASan/UBSan 与 clang-tidy 全部通过。
 
 ### 2026-08-19 — M5 Embedding 与向量检索
 
