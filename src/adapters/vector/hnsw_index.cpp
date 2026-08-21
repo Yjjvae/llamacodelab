@@ -4,7 +4,11 @@
 
 #include <algorithm>
 #include <fstream>
+// hnswlib v0.8.0 prefetches one neighbour past short adjacency lists in its manual SSE path.
+// Keep the adapter sanitizer-safe until the upstream implementation is corrected.
+#define NO_MANUAL_VECTORIZATION
 #include <hnswlib/hnswlib.h>
+#undef NO_MANUAL_VECTORIZATION
 #include <limits>
 #include <nlohmann/json.hpp>
 #include <stdexcept>
