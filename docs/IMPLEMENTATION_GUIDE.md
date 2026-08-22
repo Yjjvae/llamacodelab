@@ -868,6 +868,9 @@ git pull --ff-only
 git switch -c feat/m2-llama-inference
 ```
 
+`main` 是唯一长期集成分支，不增加永久 `develop`。分支生命周期、并行开发、stacked PR、过期 PR 和
+`--force-with-lease` 的完整规则以仓库根目录的 [CONTRIBUTING.md](../CONTRIBUTING.md) 为准。
+
 ### 7.4 提交规范
 
 使用 Conventional Commits 风格：
@@ -938,11 +941,15 @@ changes
 
 - 禁止 force push。
 - 禁止删除分支。
-- 必须通过 Pull Request 合并。
-- 必须通过 `build-test (gcc)`、`build-test (clang)`、`format`、`sanitizers` 状态检查。
+- 管理员也必须通过 Pull Request 合并，不能绕过规则。
+- 必须通过唯一且稳定的 `required` 聚合状态检查，并要求分支与 `main` 同步。
 - 要求所有 Review conversation 已解决。
-- 单人学习仓库可以暂不强制他人批准，但仍坚持自己走 PR。
-- 推荐 Squash Merge，让 `main` 历史保持一项功能一个提交。
+- 要求线性历史，仅开启 Squash Merge，并在合并后自动删除主题分支。
+- 单维护者阶段不强制批准人数；有第二位活跃维护者后再提高为一次批准。
+
+不要把会被 `paths`/`paths-ignore` 跳过的整个 workflow 直接设为必需检查。纯文档变更也需要产生一个确定的
+轻量检查结果，否则 GitHub 会让未运行的必需检查保持 Pending。实际决策和取舍见
+[ADR 0007](decisions/0007-protected-trunk-workflow.md)。
 
 ### 7.7 Issue、Project 与 ADR
 
@@ -1015,6 +1022,9 @@ Accepted / Superseded
 ```
 
 ### 7.8 里程碑与 Tag
+
+PR 合并不等于发布。文档、CI 和内部维护通常只做 squash merge，不创建 tag；只有用户可见能力、兼容修复集合、
+既定里程碑或维护版本达到发布条件后，才从验证过的 `main` 创建 tag 和 GitHub Release。
 
 建议版本：
 
@@ -3702,20 +3712,21 @@ curl --fail http://127.0.0.1:8080/readyz
 
 ### 24.1 目标
 
-每个 PR 自动验证格式、GCC/Clang 构建、单元测试和 Sanitizer。GPU 模型测试不在普通 GitHub hosted runner 上强行运行。
+所有 PR 都产生一个可以用于分支保护的确定性 `required` 结果。代码变更自动验证格式、GCC/Clang 构建、
+单元测试、Sanitizer 和 clang-tidy；纯 Markdown、`docs/**` 或许可证变更只运行轻量范围/空白检查，不消耗完整
+C++ 矩阵。GPU 模型测试不在普通 GitHub hosted runner 上强行运行。
 
 ### 24.2 CI 分层
 
-| Job               |                 PR |        main |         tag |
-| ----------------- | -----------------: | ----------: | ----------: |
-| format            |                 ✓ |          ✓ |          ✓ |
-| GCC unit          |                 ✓ |          ✓ |          ✓ |
-| Clang unit        |                 ✓ |          ✓ |          ✓ |
-| ASan/UBSan        |                 ✓ |          ✓ |          ✓ |
-| CPU Docker build  |                 ✓ |          ✓ |          ✓ |
-| CUDA Docker build |               可选 |          ✓ |          ✓ |
-| GPU E2E           | self-hosted/manual | self-hosted | self-hosted |
-| Publish image     |                    |             |          ✓ |
+| Job | 文档专用 PR | 代码 PR | `main` push | 用途 |
+|---|---:|---:|---:|---|
+| changes | ✓ | ✓ | ✓ | 分类路径并运行 `git diff --check` |
+| format | 跳过 | ✓ | 代码变化时 | C/C++ 格式 |
+| GCC/Clang unit | 跳过 | ✓ | 代码变化时 | 双编译器构建与测试 |
+| ASan/UBSan | 跳过 | ✓ | 代码变化时 | 内存与未定义行为 |
+| clang-tidy | 跳过 | ✓ | 代码变化时 | 项目静态分析 |
+| required | ✓ | ✓ | ✓ | 聚合依赖结果；唯一必需状态检查 |
+| GPU E2E | 手工 | 手工 | self-hosted/manual | 真实模型与 CUDA 验收 |
 
 ### 24.3 `.github/workflows/ci.yml`
 
@@ -3727,89 +3738,63 @@ on:
   push:
     branches: [main]
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
 jobs:
-  format:
-    runs-on: ubuntu-24.04
+  changes:
+    outputs:
+      code: ${{ steps.scope.outputs.code }}
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: recursive
-
-      - name: Install clang-format
-        run: sudo apt-get update && sudo apt-get install -y clang-format
-
-      - name: Check format
+          fetch-depth: 0
+          persist-credentials: false
+      - id: scope
         run: |
-          git ls-files -z '*.cpp' '*.hpp' '*.c' '*.h' \
-            | xargs -0 --no-run-if-empty \
-                clang-format --dry-run --Werror
+          # 对 base..head 执行 git diff --check。
+          # 只有 *.md、docs/**、LICENSE 时输出 code=false；其余输出 true。
+
+  format:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    # checkout、format check
 
   build-test:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     strategy:
       fail-fast: false
       matrix:
         compiler: [gcc, clang]
-
-    runs-on: ubuntu-24.04
-
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: recursive
-
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            build-essential \
-            ccache \
-            clang \
-            cmake \
-            ninja-build \
-            libsqlite3-dev
-
-      - name: Select compiler
-        run: |
-          if [ "${{ matrix.compiler }}" = "clang" ]; then
-            echo "CC=clang" >> "$GITHUB_ENV"
-            echo "CXX=clang++" >> "$GITHUB_ENV"
-          else
-            echo "CC=gcc" >> "$GITHUB_ENV"
-            echo "CXX=g++" >> "$GITHUB_ENV"
-          fi
-
-      - name: Configure
-        run: cmake --preset dev
-
-      - name: Build
-        run: cmake --build --preset dev
-
-      - name: Test
-        run: ctest --preset dev
+    # checkout、configure、build、ctest
 
   sanitizers:
-    runs-on: ubuntu-24.04
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    # ASan/UBSan configure、build、ctest
+
+  tidy:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    # configure、scripts/tidy.sh
+
+  required:
+    name: required
+    if: always()
+    needs: [changes, format, build-test, sanitizers, tidy]
     steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: recursive
-
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            build-essential \
-            ccache \
-            cmake \
-            ninja-build \
-            libsqlite3-dev
-
-      - name: Configure, build, test
-        run: cmake --workflow --preset asan
+      - run: |
+          # success/skipped 可接受；failure/cancelled/timed_out 必须失败。
 ```
+
+上面只展示控制流；可执行步骤以 [实际 workflow](../.github/workflows/ci.yml) 为准。关键点是“条件跳过 job”，
+而不是用 `paths-ignore` 跳过整个 workflow。GitHub 将条件跳过的 job 视为成功，但整个 workflow 未触发时，
+受保护分支等待的必需检查会一直处于 Pending。
 
 ### 24.4 Action 版本固定
 
