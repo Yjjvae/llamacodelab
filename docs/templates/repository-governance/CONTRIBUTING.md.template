@@ -1,0 +1,116 @@
+# Contributing to {{PROJECT_NAME}}
+
+## Before you start
+
+- Start from an up-to-date `{{DEFAULT_BRANCH}}`; never develop or push directly on it.
+- Keep one coherent concern in each branch and Pull Request.
+- Do not commit credentials, generated output, local caches, large artifacts, or project-specific
+  private data.
+
+## Branches
+
+Use a lowercase category and concise kebab-case topic:
+
+```text
+feat/add-search-api
+fix/handle-client-cancel
+docs/update-quick-start
+test/cover-index-recovery
+refactor/split-runtime-service
+perf/reduce-query-allocation
+build/pin-toolchain
+ci/add-sanitizer-job
+chore/refresh-maintainer-docs
+```
+
+`{{DEFAULT_BRANCH}}` is the only long-lived integration branch and must remain releasable. There is
+no permanent `develop` branch. As the maintainer, keep at most {{WIP_LIMIT}} implementation topics
+active at once.
+
+Use Draft PRs for incomplete or blocked work. Review Drafts after {{DRAFT_REVIEW_DAYS}} days without
+activity and close them after {{DRAFT_CLOSE_DAYS}} days unless a recorded reason justifies keeping
+them. Close superseded PRs immediately with a link to their replacement.
+
+Start work with:
+
+```bash
+git switch {{DEFAULT_BRANCH}}
+git pull --ff-only
+git switch -c feat/concise-topic
+```
+
+Rebase only your own topic commits. If rewritten topic history must be published, use
+`git push --force-with-lease`; never force push `{{DEFAULT_BRANCH}}`.
+
+For dependent work, prefer sequential PRs. If a stacked PR is necessary, target its immediate
+parent, document the dependency, merge bottom-up, then retarget and update the remaining PR.
+
+## Commits
+
+Use Conventional Commits:
+
+```text
+<type>(<optional-scope>): <imperative summary>
+```
+
+Use `feat`, `fix`, `docs`, `test`, `refactor`, `perf`, `build`, `ci`, or `chore`. Keep the summary in
+English, imperative, lowercase, without a trailing period, and preferably within 72 characters.
+Mark incompatible changes with `!` and a `BREAKING CHANGE:` body.
+
+## Verification
+
+For source, tests, dependencies, scripts, build configuration, or workflow changes, run:
+
+```bash
+{{QUALITY_COMMAND}}
+```
+
+For documentation-only changes, run:
+
+```bash
+{{DOCS_COMMAND}}
+```
+
+Verify every new local documentation link. Documentation PRs still emit `changes` and `required`,
+but skip the language-specific quality jobs.
+
+## Pull Requests
+
+Mark a PR Ready only when its scope is complete, local verification passed, and it can merge
+cleanly. Every PR must include:
+
+1. A Conventional Commit title.
+2. What changed and why.
+3. Design choices and compatibility impact.
+4. Exact verification commands and results.
+5. Documentation and worklog updates when behavior or delivery state changes.
+6. Release impact: `none`, `patch`, `minor`, or `major`.
+
+All applicable CI jobs and the unique `required` check must pass. Resolve every review
+conversation. Do not add unrelated cleanup merely to avoid opening a second PR.
+
+## Merge policy
+
+- Squash merge only; the PR title becomes the commit on `{{DEFAULT_BRANCH}}`.
+- Never merge Draft, conflicted, failing, or unresolved PRs.
+- Merge a focused green PR promptly; do not batch unrelated work by date.
+- Delete the topic branch after merge.
+- Revert faulty published changes through a new PR; never rewrite public mainline history.
+
+Frequent small merges are healthy when each PR is independently reviewable and keeps
+`{{DEFAULT_BRANCH}}` releasable.
+
+## Protected mainline
+
+Repository settings require PRs, the current branch tip, the unique `required` status context,
+resolved conversations, and linear history. They include administrators and forbid force pushes
+and deletion.
+
+Use zero approvals only for a genuine one-maintainer repository. Require at least one independent
+approval when another maintainer is active.
+
+## Releases
+
+A merge is not automatically a release. Create a tag and Release only for a user-visible
+capability, a compatible fix set, a completed milestone, or a planned maintenance release.
+Documentation and CI-only PRs normally have release impact `none`.
