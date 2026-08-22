@@ -174,3 +174,5 @@ cmake --build build/bench --target llcl_retrieval_benchmark
 
 - [完整实现教程](docs/IMPLEMENTATION_GUIDE.md)
 - [开发工作日志](WORKLOG.md)
+- [TUI 工作台规划](docs/tui-plan.md)
+- [前后端 Future Plan](docs/FUTURE_PLAN.md)
