@@ -320,6 +320,16 @@ LLCL_TEST_GPU_LAYERS=-1 LLCL_TEST_REPEAT=20 \
 
 ## 日期记录
 
+### 2026-08-22 — 前后端架构审查与 Future Plan
+
+- 复查 CLI、HTTP/SSE、索引持久化、检索编排与计划中的 TUI 边界，记录索引代际不一致、并发索引、模型指纹、
+  SSE 跨线程输出、客户端契约和伪多轮语义等风险。
+- 新增前后端 Future Plan，按 P0–P3 整理正确性、API、TUI、检索体验、IDE 与交付方向，并为高优先级项目定义
+  可复现验收条件和实施顺序。
+- 更新 TUI 规划，把 `IndexCoordinator`、真实 embedding SHA-256、`/v1/status`、citation 内容和有界
+  `TokenChannel` 明确为界面开发前置条件。
+- 在实现教程的既有“可选进阶方向”中增加文档入口，不新增或改写 M0–M12 阶段。
+
 ### 2026-08-22 — v0.6.1 CI 与 embedding batch 修复
 
 - 公开仓库并恢复 GitHub Actions 的 PR/main 自动触发；公开仓库的标准 GitHub-hosted runner 不消耗
