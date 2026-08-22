@@ -1,0 +1,45 @@
+# Protected trunk workflow
+
+## Status
+
+Accepted — {{DATE}}
+
+## Context
+
+{{PROJECT_NAME}} needs a reviewable mainline workflow that keeps `{{DEFAULT_BRANCH}}` releasable,
+works with {{MAINTAINER_COUNT}} active maintainer(s), and does not spend the full quality matrix on
+documentation-only changes.
+
+## Decision
+
+- Use `{{DEFAULT_BRANCH}}` as the only long-lived integration branch.
+- Require Pull Requests, a unique `required` status context, resolved conversations, linear
+  history, and a current branch tip.
+- Include administrators and prohibit force pushes and deletion.
+- Allow only squash merge and delete merged head branches.
+- Run an always-emitted lightweight gate; conditionally skip language-specific jobs for
+  documentation-only paths.
+- Use {{REQUIRED_APPROVALS}} required approval(s).
+- Treat tags and Releases as explicit delivery events rather than side effects of every merge.
+
+## Alternatives considered
+
+### Long-lived develop branch
+
+Rejected unless the project later has a release-train requirement that cannot be handled with
+short-lived topic and release branches.
+
+### Skip the complete workflow for documentation
+
+Rejected because a path-skipped workflow may never report a required status context.
+
+### Multiple merge methods
+
+Rejected because one reviewed PR should map predictably to one mainline commit.
+
+## Consequences
+
+- Every mainline change has a PR audit trail.
+- Code PRs may rerun after `{{DEFAULT_BRANCH}}` advances.
+- Documentation PRs still run lightweight jobs but skip the expensive quality matrix.
+- Changes to the `required` job name must be coordinated with repository protection settings.

@@ -951,6 +951,9 @@ changes
 轻量检查结果，否则 GitHub 会让未运行的必需检查保持 Pending。实际决策和取舍见
 [ADR 0007](decisions/0007-protected-trunk-workflow.md)。
 
+新项目可以从[可复用仓库治理模板](templates/repository-governance/README.md)开始，选择 solo/team 保护配置，
+再替换项目名、质量门命令、文档路径和维护周期；不要直接复制本项目的 C++ job。
+
 ### 7.7 Issue、Project 与 ADR
 
 为每个里程碑创建一个 GitHub Milestone，再把工作拆成可以独立验收的 Issue。例如 M5：

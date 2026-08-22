@@ -35,6 +35,7 @@ updates.
 
 The exact contributor-facing lifecycle and merge rules live in `CONTRIBUTING.md`. Repository
 settings are part of this decision and must be checked after changing CI job names.
+The reusable, parameterized form is archived under `docs/templates/repository-governance/`.
 
 ## Alternatives considered
 
