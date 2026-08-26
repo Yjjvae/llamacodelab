@@ -2,7 +2,12 @@
 
 > 面向 C++ 实习作品集的工程化学习路线
 > 目标环境：WSL2、Ubuntu 26.04、C++20、RTX 4060 Laptop 8GB、CUDA 13.3
-> 文档基线日期：2026-07-29
+> 教程初始基线日期：2026-07-29
+
+> [!IMPORTANT]
+> 本文是 M0–M12 的目标实现教程，不是仓库实时进度页。当前已经交付的能力、版本和未完成项以
+> [README](../README.md#status) 与 [Worklog](../WORKLOG.md#当前状态) 为准；后续章节中的文件树、命令和
+> 配置是教学目标，在对应工作完成前不一定存在于仓库中。
 
 ---
 
@@ -306,9 +311,10 @@ source ~/.bashrc
 
 ---
 
-## 5. 最终目录结构
+## 5. 目标目录结构
 
-最终目录并不是第一天全部创建。每个里程碑只创建当时需要的部分。
+目标目录并不是第一天全部创建。每个里程碑只创建当时需要的部分；这是一张教学蓝图，不是当前仓库文件
+清单。实际文件以 Git 工作树为准，当前交付状态见 [README](../README.md#status)。
 
 ```text
 LlamaCodeLab/
@@ -323,9 +329,6 @@ LlamaCodeLab/
 │       └── release.yml
 ├── apps/
 │   ├── cli/
-│   │   ├── CMakeLists.txt
-│   │   └── main.cpp
-│   ├── indexer/
 │   │   ├── CMakeLists.txt
 │   │   └── main.cpp
 │   └── server/
@@ -1029,24 +1032,29 @@ Accepted / Superseded
 PR 合并不等于发布。文档、CI 和内部维护通常只做 squash merge，不创建 tag；只有用户可见能力、兼容修复集合、
 既定里程碑或维护版本达到发布条件后，才从验证过的 `main` 创建 tag 和 GitHub Release。
 
-建议版本：
+仓库已经发布的里程碑版本：
 
-| Tag        | 能力                              |
-| ---------- | --------------------------------- |
-| `v0.1.0` | CMake、测试和 CLI 骨架            |
-| `v0.2.0` | 本地 Llama CPU/CUDA 推理          |
-| `v0.3.0` | 文本切块、Embedding、暴力向量检索 |
-| `v0.4.0` | 完整 RAG 和引用                   |
-| `v0.5.0` | HTTP/SSE 与持久化                 |
-| `v0.6.0` | HNSW、混合检索、Rerank            |
-| `v0.7.0` | Clang AST 语义索引                |
-| `v1.0.0` | CI、Docker、评测、文档全部完成    |
+| Tag         | 能力                            |
+| ----------- | ------------------------------- |
+| `v0.2.0`  | 本地 Llama CPU/CUDA 推理        |
+| `v0.3.0`  | 多轮消息、模板、Sampling 与取消 |
+| `v0.4.0`  | 文件扫描与文本代码切块          |
+| `v0.5.0`  | Embedding 与暴力向量检索        |
+| `v0.6.0`  | 完整 RAG 和引用                 |
+| `v0.6.1`  | CI 与 embedding batch 修复      |
+| `v0.7.0`  | SQLite 持久化和增量索引         |
+| `v0.8.0`  | HTTP/SSE 服务                   |
+| `v0.9.0`  | HNSW、混合检索与 Rerank         |
+| `v0.10.0` | Clang AST 语义索引              |
+| `v0.11.0` | 可复现评测与性能流程            |
+
+M12 完成前不预先声明 `v1.0.0`；发布版本由实际交付内容和兼容性决定。
 
 创建 Tag：
 
 ```bash
-git tag -a v0.2.0 -m "Local CPU and CUDA inference"
-git push origin v0.2.0
+git tag -a <version> -m "<release summary>"
+git push origin <version>
 ```
 
 ---
@@ -1279,6 +1287,8 @@ class AskService {
 ---
 
 ## 9. 总路线图
+
+下表定义教学顺序和既有里程碑名称，不表示所有行都已经完成。
 
 | 里程碑 | 结果                           | 推荐分支                     |
 | ------ | ------------------------------ | ---------------------------- |
@@ -1747,7 +1757,6 @@ Model weights are not committed to Git.
 | Role | Model id | File | Quantization | SHA-256 | License |
 |---|---|---|---|---|---|
 | generation-dev | | | Q4_K_M | | |
-| generation-demo | | | Q4_K_M | | |
 | embedding | | | | | |
 ```
 
@@ -3456,6 +3465,9 @@ TEST(AskService, PropagatesCancellationToGenerator)
 
 ## 23. M12-A：Docker 容器化
 
+> 本节描述 M12-A 的计划实现和验收，不代表仓库当前已有这些 Docker 文件。实际交付状态以
+> [README](../README.md#status) 和 [Worklog](../WORKLOG.md#当前状态) 为准。
+
 ### 23.1 目标
 
 构建可复现的 CPU 和 CUDA 运行镜像，模型与索引通过 Volume 挂载，不烘焙进镜像。
@@ -4242,9 +4254,9 @@ cmake --build --preset release-cuda
 ### 31.2 建索引
 
 ```bash
-./build/release-cuda/apps/indexer/llcl-index build \
-  --repo /path/to/target \
-  --config configs/cuda-8gb.example.json
+./build/release-cuda/apps/cli/llcl-cli index \
+  --config configs/cuda-8gb.example.json \
+  --repo /path/to/target
 ```
 
 展示：
@@ -4259,7 +4271,9 @@ cmake --build --preset release-cuda
 
 ```bash
 ./build/release-cuda/apps/server/llcl-server \
-  --config configs/cuda-8gb.example.json
+  --config configs/cuda-8gb.example.json \
+  --repo /path/to/target \
+  --port 8080
 ```
 
 ### 31.4 问五类问题

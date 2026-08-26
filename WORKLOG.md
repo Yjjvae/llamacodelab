@@ -1,15 +1,15 @@
 # LlamaCodeLab Worklog
 
-本文记录实际完成的代码、验证证据、设计决策和未完成项。它不是计划文档；后续每次开发都应
-在文件顶部的“当前状态”以及底部的日期记录中追加结果。
+本文记录实际完成的代码、验证证据、设计决策和未完成项。它不是计划文档；后续每次开发都应更新文件顶部的
+“当前状态”，并在“日期记录”下按时间倒序增加结果。
 
 ## 当前状态
 
-- 日期：2026-08-22（Asia/Shanghai）
-- 教程进度：第 10–21 章，即 M0–M11
-- 项目版本：`0.11.0`（待发布）
-- 结论：M11 已实现可复现的 Chunk、检索和推理 Benchmark 基础设施
-- Git：M11 使用 `perf/m11-benchmarks` 聚焦分支，待通过 CI 后创建 PR
+- 日期：2026-08-26（Asia/Shanghai）
+- 教程进度：M0–M11 已交付；M12 尚未整体完成
+- 项目版本：[`v0.11.0`](https://github.com/Yjjvae/llamacodelab/releases/tag/v0.11.0)（Latest Release）
+- 结论：当前版本提供本地推理、代码索引、RAG、HTTP/SSE、语义检索和可复现评测
+- Git：`main` 受保护；变更通过聚焦分支和 PR 合并，普通合并不自动创建版本
 
 | 里程碑 | 状态 | 可验证结果 |
 |---|---|---|
@@ -28,8 +28,11 @@
 | M9 高级检索 | 完成 | HNSW、FTS5/BM25、RRF、可选 rerank 与回退路径 |
 | M10 语义索引 | 完成 | Clang AST Chunk、符号/边持久化、符号图一跳检索与文本 fallback |
 | M11 评测与性能 | 完成 | 固定 seed 基准、检索指标、环境快照、报告模板与 CPU/CUDA 对比流程 |
+| M12-A Docker | 未完成 | 仓库尚无 CPU/CUDA Dockerfile、Compose 或容器验收产物 |
+| M12-B CI | 已投入使用 | 文档轻量检查、代码完整矩阵和受保护主干的 `required` 聚合门禁 |
+| M12-C Release | 基础流程完成 | 已发布到 `v0.11.0`；容器摘要、安装包和 v1 交付仍未完成 |
 
-## 本次实现范围
+## 里程碑实现记录
 
 ### M0：仓库和开发约定
 
@@ -167,9 +170,14 @@
 | spdlog | `v1.15.3` / `6fa36017cfd5731d617e1a934f0e5ea9c4445b13` | `5097fb362e79a2bd7247beaf1f8377ed60e274fbe83a4b33e7b73383f0279022` |
 | CLI11 | `v2.5.0` / `4160d259d961cd393fd8d67590a8c7d210207348` | `c91e8768600e61be11f7250e3cf3e71afd9d0f18f9c9e9e209a8e084ca08cd85` |
 | cpp-httplib | `v0.20.0` | `18064587e0cc6a0d5d56d619f4cbbcaba47aa5d84d86013abbd45d95c6653866` |
+| hnswlib | `v0.8.0` | `cf61d7dd8dc9bfba7f4abe0ed26698e90ac9f49a0badb2e1b0f3ba89b72cf3bb` |
 | GoogleTest | `v1.17.0` / `52eb8108c5bdec04579160ae17225d66034bd723` | `745c55415660044610f7fcd3af7a6420d5de16a7dbb9ebfe2e131275676232be` |
 
-## 实际环境
+SQLite 由 CMake 从系统开发包发现，不属于上表的固定源码归档。
+
+## M2 GPU 验收环境快照（2026-08-03）
+
+以下数据是 M2 验收时保留的可复现证据，不表示执行本文档时机器上的软件仍是同一版本。
 
 | 项目 | 实际值 |
 |---|---|
@@ -190,7 +198,7 @@
 说明：普通 WSL 环境能通过 `/usr/lib/wsl/lib/nvidia-smi` 看到 GPU。CPU build 的
 `llcl-cli devices` 只列出 CPU 是预期行为，因为该 build 没有编译 `GGML_CUDA`。
 
-## 验证记录
+## M2 基线验证记录（历史验收）
 
 ### Debug CPU
 
@@ -307,7 +315,7 @@ LLCL_TEST_GPU_LAYERS=-1 LLCL_TEST_REPEAT=20 \
 结果：20 次同进程生成通过，用时 3.02 秒。`nvidia-smi` 的整卡已用显存在测试前约
 1599 MiB、运行期间 1596–1609 MiB、结束后 1607 MiB；未观察到随次数递增的显存增长。
 
-## 第 12 章验收清单
+## M2（教程第 12 章）验收清单
 
 - [x] 同一套源码提供 CPU/CUDA CMake 选项和 preset。
 - [x] CPU Debug 和 Release 编译成功。
@@ -321,19 +329,31 @@ LLCL_TEST_GPU_LAYERS=-1 LLCL_TEST_REPEAT=20 \
 
 ## 已知限制
 
-1. `chat` CLI 的历史只存在于一次命令调用；服务端持久会话、并发队列和 context pool 属于后续里程碑。
-2. stop token 在每次 decode 之间检查；一次正在执行的 GPU kernel 不会被强行中断。
-3. 当前只接受 llama.cpp 能识别的 GGUF 模板或其内置模板名称，不执行任意 Jinja。
-4. 当前索引仅保存在内存；增量索引、持久化和近似搜索属于后续里程碑。
-5. `nvidia-smi` 在 WSL 中报告整卡占用，包含 Windows 桌面和其他进程，不能当作项目独占显存。
+1. `/v1/chat/completions` 只使用最后一条 user 消息；它尚不具备真正的多轮 RAG 追问语义。
+2. CLI `ask` 每次临时扫描并建立内存索引，与服务端的持久化检索路径尚未统一。
+3. 索引代际一致性、embedding 模型真实 SHA-256 和 SSE 跨线程输出仍需按
+   [Future Plan](docs/FUTURE_PLAN.md) 的 P0 项加固。
+4. TUI 和 VS Code 扩展尚未实现；当前用户入口只有 CLI 与 HTTP/SSE。
+5. M12 的 Dockerfile、Docker Compose、容器验收和完整 v1 交付尚未实现。
+6. stop token 在每次 decode 之间检查；一次正在执行的 GPU kernel 不会被强行中断。
+7. 当前只接受 llama.cpp 能识别的 GGUF 模板或其内置模板名称，不执行任意 Jinja。
+8. `nvidia-smi` 在 WSL 中报告整卡占用，包含 Windows 桌面和其他进程，不能当作项目独占显存。
 
-## 下一步操作
+## 规划入口
 
-### 1. 进入 M6
-
-把检索结果按真实 tokenizer 的预算组装为带引用的 RAG prompt，并提供 `ask` CLI。
+- M12 的教学实现顺序见 [完整实现教程](docs/IMPLEMENTATION_GUIDE.md)。
+- 后端正确性、稳定客户端契约和长期演进见 [Future Plan](docs/FUTURE_PLAN.md)。
+- 终端客户端的前置条件、边界和验收见 [TUI 工作台规划](docs/tui-plan.md)。
 
 ## 日期记录
+
+### 2026-08-26 — 文档状态清理
+
+- 以 README 为用户入口、Worklog 顶部为交付快照，明确当前 Latest Release 为 `v0.11.0`、M0–M11 已交付，
+  M12 的 Docker/完整交付仍未完成。
+- 删除已经失去用途的模型占位项和已完成里程碑的旧下一步，更新停留在 M2/M5 时期的已知限制。
+- 为实现教程、Future Plan 和 TUI 规划增加文档类型说明，避免把教学示例或设计目标误认为仓库现有能力。
+- 纠正 ADR 0006 对既有 Docker 路径的错误陈述，并在贡献规范中加入文档职责和时效维护规则。
 
 ### 2026-08-22 — 可复用仓库治理模板
 

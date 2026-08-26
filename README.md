@@ -1,13 +1,18 @@
 # LlamaCodeLab
 
-一个基于 llama.cpp 的本地 C++ 代码库智能助手。目前完成到 M11：
+一个基于 llama.cpp 的本地 C++ 代码库智能助手。目前交付到 M11：
 工程骨架、真实 GGUF 的 CPU/CUDA 流式推理、多轮消息、安全的仓库扫描、持久化向量检索、SQLite FTS5/RRF
 混合检索、本地 HTTP/SSE 服务、可选的 Clang AST 语义索引和符号图检索，以及可复现的性能评测。
 
 ## Status
 
-M0–M11 已完成。`ask` 会临时扫描仓库、检索相关 Chunk，以真实 tokenizer 预算构造防注入 RAG
-提示词，并输出带源文件和行号的引用；`index` 构建可增量更新的持久化索引；`llcl-server` 提供 HTTP/SSE API。
+当前发布版本是 [`v0.11.0`](https://github.com/Yjjvae/llamacodelab/releases/tag/v0.11.0)，M0–M11
+已完成。`ask` 会临时扫描仓库、检索相关 Chunk，以真实 tokenizer 预算构造防注入 RAG 提示词，并输出带
+源文件和行号的引用；`index` 构建可增量更新的持久化索引；`llcl-server` 提供 HTTP/SSE API。
+
+M12 尚未整体完成：GitHub Actions、受保护主干和 Release 流程已经投入使用，但仓库还没有 CPU/CUDA
+Dockerfile、Docker Compose 或容器交付物。TUI、VS Code 扩展以及 [Future Plan](docs/FUTURE_PLAN.md) 中的
+后端加固也仍是规划，不属于当前可用功能。
 
 ## Requirements
 
@@ -15,7 +20,8 @@ M0–M11 已完成。`ask` 会临时扫描仓库、检索相关 Chunk，以真�
 - CMake 3.28+
 - 支持 C++20 的 GCC 或 Clang
 - Git（需初始化 `third_party/llama.cpp` 子模块）
-- Ninja、ccache
+- SQLite 3 开发包（Ubuntu/Debian 为 `libsqlite3-dev`）
+- 标准 preset 使用 Ninja 和 ccache；`*-make` preset 可用 Unix Makefiles 且不要求 ccache
 - GPU 构建：CUDA Toolkit 13.3（Ubuntu 26.04）
 - 可选语义索引：LLVM/Clang 开发包（例如 Ubuntu 的 `llvm-21-dev libclang-21-dev`）
 
@@ -172,8 +178,8 @@ cmake --build build/bench --target llcl_retrieval_benchmark
 
 ## Documentation
 
-- [完整实现教程](docs/IMPLEMENTATION_GUIDE.md)
-- [开发工作日志](WORKLOG.md)
-- [TUI 工作台规划](docs/tui-plan.md)
-- [前后端 Future Plan](docs/FUTURE_PLAN.md)
-- [可复用仓库治理模板](docs/templates/repository-governance/README.md)
+- [完整实现教程](docs/IMPLEMENTATION_GUIDE.md)：M0–M12 的目标路线和教学示例，不代表每一节都已落地。
+- [开发工作日志](WORKLOG.md)：当前交付状态、验证证据、历史记录和已知限制。
+- [TUI 工作台规划](docs/tui-plan.md)：尚未实现的终端客户端设计。
+- [前后端 Future Plan](docs/FUTURE_PLAN.md)：M0–M12 编号之外的后续架构工作。
+- [可复用仓库治理模板](docs/templates/repository-governance/README.md)：跨项目复用的 Git/GitHub 规则。

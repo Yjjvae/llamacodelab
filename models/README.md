@@ -5,7 +5,6 @@
 | Role | Model id | File | Quantization | SHA-256 | License |
 |---|---|---|---|---|---|
 | generation-dev | `Qwen/Qwen2.5-Coder-1.5B-Instruct-GGUF` @ `f86cb2c1fa58255f8052cc32aeede1b7482d4361` | `qwen2.5-coder-1.5b-instruct-q4_k_m.gguf` | Q4_K_M | `cc324af070c2ecbfd324a30884d2f951a7ff756aba85cb811a6ec436933bb046` | Apache-2.0 |
-| generation-demo | 待选择 | 待填写 | Q4_K_M | 待填写 | 待核对 |
 | embedding | `nomic-ai/nomic-embed-text-v1.5-GGUF` @ `4ef6244e6d94b30c009d2388c001faf181c3e237` | `nomic-embed-text-v1.5-q4_k_m.gguf` | Q4_K_M | `d4e388894e09cf3816e8b0896d81d265b55e7a9fff9ab03fe8bf4ef5e11295ac` | Apache-2.0 |
 
 ## 下载并校验
