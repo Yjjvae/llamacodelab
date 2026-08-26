@@ -187,7 +187,8 @@ Embedding 使用独立的小模型，不要用聊天模型替代。候选模型�
 - 明确记录模型许可证、来源、版本和向量维数。
 - 输出向量可以归一化。
 
-第一阶段可选择体积较小的 BGE 系列 GGUF；后面再用更大的多语言 Embedding 模型做质量对照。
+当前实现与下载说明使用 Nomic Embed Text v1.5 Q4_K_M；更换 embedding 模型必须重建索引，并重新记录
+模型来源、SHA-256、维度和检索质量基线。
 
 ### 3.3 8GB 显存默认策略
 
@@ -195,24 +196,18 @@ Embedding 使用独立的小模型，不要用聊天模型替代。候选模型�
 
 ```json
 {
-  "model": {
+  "generation_model": {
+    "path": "models/qwen2.5-coder-1.5b-instruct-q4_k_m.gguf",
     "context_size": 4096,
     "batch_size": 512,
     "gpu_layers": -1,
-    "flash_attention": true,
-    "kv_cache_k": "q8_0",
-    "kv_cache_v": "q8_0"
-  },
-  "generation": {
-    "max_tokens": 512,
-    "temperature": 0.2,
-    "top_p": 0.9,
-    "seed": 42
+    "flash_attention": true
   }
 }
 ```
 
-其中 `gpu_layers = -1` 在项目配置层表示“尽可能全部卸载”，适配器再转换为 llama.cpp 的具体参数。
+其中 `gpu_layers = -1` 在项目配置层表示“尽可能全部卸载”，适配器再转换为 llama.cpp 的具体参数。输出
+token 上限、temperature、top-p 和 seed 当前由 CLI/API 请求指定，不属于 JSON 配置。
 
 第一版限制：
 
@@ -1305,8 +1300,9 @@ class AskService {
 | M9     | HNSW、混合检索与 Rerank        | `perf/m9-retrieval`        |
 | M10    | Clang AST 与符号图             | `feat/m10-clang-indexer`   |
 | M11    | 评测、Benchmark 与 CUDA 优化   | `perf/m11-benchmarks`      |
-| M12    | Docker、CI、Release 与安全收尾 | `release/v1`               |
+| M12    | Docker、CI、Release 与安全收尾 | `build/m12-containerization` |
 
+M12 内部仍按职责拆分 PR；上表分支只对应容器化实现，CI 与发布准备使用各自的 `ci/*`、`release/*` 分支。
 不要按自然日追进度。每个里程碑通过验收后再继续。
 
 ---
@@ -2653,7 +2649,6 @@ scripts/smoke_test.sh
 curl -N http://127.0.0.1:8080/v1/chat/completions \
   -H 'Content-Type: application/json' \
   -d '{
-    "model": "llama-3.1-8b-instruct-q4",
     "stream": true,
     "messages": [
       {
@@ -3466,7 +3461,7 @@ TEST(AskService, PropagatesCancellationToGenerator)
 
 ## 23. M12-A：Docker 容器化
 
-> M12-A 的实现与真实 CPU/CUDA 运行验收已在当前开发分支完成。可执行内容以仓库中的
+> M12-A 的实现与真实 CPU/CUDA 运行验收已经完成，但尚未发布。可执行内容以仓库中的
 > [CPU Dockerfile](../docker/Dockerfile.cpu)、[CUDA Dockerfile](../docker/Dockerfile.cuda) 和
 > [Compose](../compose.yaml) 为准；发布状态以 [Worklog](../WORKLOG.md#当前状态) 为准。
 
@@ -3744,13 +3739,13 @@ llama.cpp 子模块不要自动无条件升级。它的升级需要：
 
 ### 25.1 Release 内容
 
-每个正式版本包含：
+M12 的完整发布目标包含：
 
-- 源码 tag。
+- 源码 tag 和 GitHub Release（所有正式版本必需）。
 - Linux CPU 二进制包。
 - 可选 CUDA 二进制包或镜像。
 - Docker image digest。
-- CHANGELOG。
+- CHANGELOG；历史版本尚未维护独立文件，M12-C 需补齐后再发布 `v0.12.0`。
 - 兼容的 llama.cpp commit。
 - 支持的配置 schema version。
 - 不包含任何受许可证约束的模型权重。
@@ -3815,7 +3810,8 @@ MAJOR.MINOR.PATCH
 
 ## 26. 安全与可靠性清单
 
-即使是本地项目，也需要把输入当作不可信。
+即使是本地项目，也需要把输入当作不可信。以下是 M12 的目标清单，不表示每一项已经实现；当前缺口以
+[Worklog](../WORKLOG.md#已知限制) 和 [Future Plan](FUTURE_PLAN.md) 为准。
 
 ### 26.1 文件系统
 
@@ -3876,7 +3872,8 @@ Debug 日志如果需要内容，必须显式开启并在 README 警告。
 
 ## 27. 配置优先级与生产配置
 
-推荐优先级：
+目标配置优先级如下；当前实现只有服务端 CLI 参数和 JSON 配置，环境变量覆盖与完整 compiled-default
+回显尚未实现：
 
 ```text
 CLI arguments
@@ -3888,56 +3885,44 @@ JSON config
 compiled defaults
 ```
 
-示例 `configs/cuda-8gb.example.json`：
+当前可执行配置以 [`configs/default.json`](../configs/default.json) 为准；下面是与现有解析器一致的 CUDA
+示例。服务监听地址和端口目前由 `llcl-server --host/--port` 指定，不属于 JSON schema。
 
 ```json
 {
-  "server": {
-    "host": "127.0.0.1",
-    "port": 8080,
-    "http_threads": 4,
-    "max_request_bytes": 1048576
-  },
   "generation_model": {
-    "path": "models/llama-3.1-8b-instruct-q4_k_m.gguf",
+    "path": "models/qwen2.5-coder-1.5b-instruct-q4_k_m.gguf",
     "context_size": 4096,
     "batch_size": 512,
     "gpu_layers": -1,
-    "flash_attention": true,
-    "kv_cache_k": "q8_0",
-    "kv_cache_v": "q8_0"
+    "flash_attention": true
   },
   "embedding_model": {
-    "path": "models/embedding-model.gguf",
-    "batch_size": 256,
-    "gpu_layers": 0
-  },
-  "retrieval": {
-    "top_k_vector": 30,
-    "top_k_keyword": 30,
-    "top_k_final": 8,
-    "hnsw_ef_search": 64,
-    "rerank": false
+    "path": "models/nomic-embed-text-v1.5-q4_k_m.gguf",
+    "context_size": 2048,
+    "batch_size": 512,
+    "gpu_layers": -1,
+    "flash_attention": true
   },
   "index": {
     "data_dir": "var/index",
     "chunk_lines": 80,
     "overlap_lines": 16,
-    "max_file_bytes": 1048576
+    "max_file_bytes": 1048576,
+    "top_k": 8,
+    "hnsw_enabled": false,
+    "hnsw_ef_search": 256,
+    "reranker_enabled": false,
+    "rerank_candidates": 30,
+    "semantic_index_enabled": false,
+    "compilation_database_dir": "build"
   },
-  "limits": {
-    "generation_queue": 4,
-    "max_output_tokens": 512,
-    "request_timeout_seconds": 120
-  },
-  "logging": {
-    "level": "info",
-    "content_logging": false
-  }
+  "log_level": "info"
 }
 ```
 
-启动后把最终配置输出成已脱敏的结构化日志：
+`server`、`limits`、KV cache 类型、内容日志开关和 API key 都是尚未实现的目标配置，不能提前写入现有 JSON。
+未来增加这些字段时，启动后应把最终配置输出成已脱敏的结构化日志，例如：
 
 ```json
 {

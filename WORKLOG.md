@@ -9,7 +9,7 @@
 - 已发布进度：M0–M11；M12 尚未整体完成
 - 开发分支版本：`0.12.0`
 - 最近发布版本：[`v0.11.0`](https://github.com/Yjjvae/llamacodelab/releases/tag/v0.11.0)
-- 当前分支：M12-A 容器实现及真实 CPU/CUDA 运行验收已完成，尚未发布
+- 未发布变更：M12-A 容器实现及真实 CPU/CUDA 运行验收已完成
 - Git：`main` 受保护；变更通过聚焦分支和 PR 合并，普通合并不自动创建版本
 
 | 里程碑 | 状态 | 可验证结果 |
@@ -31,7 +31,7 @@
 | M11 评测与性能 | 完成 | 固定 seed 基准、检索指标、环境快照、报告模板与 CPU/CUDA 对比流程 |
 | M12-A Docker | 完成 | CPU/CUDA 多阶段镜像、Compose、真实模型/GPU、持久化、安全策略和静态检查通过 |
 | M12-B CI | 已投入使用 | 文档轻量检查、代码完整矩阵和受保护主干的 `required` 聚合门禁 |
-| M12-C Release | 基础流程完成 | 已发布到 `v0.11.0`；容器摘要、安装包和完整交付仍未完成 |
+| M12-C Release | 部分完成 | Tag/Release 流程已使用；CHANGELOG、安装包、容器摘要和 `v0.12.0` 发布仍未完成 |
 
 ## 里程碑实现记录
 
@@ -335,7 +335,7 @@ LLCL_TEST_GPU_LAYERS=-1 LLCL_TEST_REPEAT=20 \
 3. 索引代际一致性、embedding 模型真实 SHA-256 和 SSE 跨线程输出仍需按
    [Future Plan](docs/FUTURE_PLAN.md) 的 P0 项加固。
 4. TUI 和 VS Code 扩展尚未实现；当前用户入口只有 CLI 与 HTTP/SSE。
-5. M12-A 容器实现已验收但尚未发布；M12 的安装包、容器发布摘要和完整交付仍未完成。
+5. M12-A 容器实现已验收但尚未发布；M12 的 CHANGELOG、安装包、容器发布摘要和完整交付仍未完成。
 6. stop token 在每次 decode 之间检查；一次正在执行的 GPU kernel 不会被强行中断。
 7. 当前只接受 llama.cpp 能识别的 GGUF 模板或其内置模板名称，不执行任意 Jinja。
 8. `nvidia-smi` 在 WSL 中报告整卡占用，包含 Windows 桌面和其他进程，不能当作项目独占显存。
@@ -354,6 +354,8 @@ LLCL_TEST_GPU_LAYERS=-1 LLCL_TEST_REPEAT=20 \
   和尚未实现的未来计划，不再把“源码存在”“验收完成”“已经发布”混为一谈。
 - 删除已经失去用途的模型占位项和已完成里程碑的旧下一步，更新停留在 M2/M5 时期的已知限制。
 - 为实现教程、Future Plan 和 TUI 规划增加文档类型说明，避免把教学示例或设计目标误认为仓库现有能力。
+- 清除易失效的“当前分支”状态，修正 M12 分支示例、HTTP 请求和 CUDA 配置；删除现有解析器不支持的
+  `server`、`limits`、KV cache 与日志对象示例，并把 Release、安全条目明确标为 M12 目标而非既成功能。
 - 纠正 ADR 0006 对既有 Docker 路径的错误陈述，并在贡献规范中加入文档职责和时效维护规则。
 - M12-A 最终证据：CPU/CUDA 镜像均成功构建，运行时仅含 `llcl-cli`/`llcl-server`，以 UID/GID `10001`
   运行；CPU 镜像大小 `98,469,718` bytes，CUDA 镜像大小 `1,591,059,925` bytes。

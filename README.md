@@ -6,13 +6,14 @@
 
 ## Status
 
-当前开发分支的源码版本为 `0.12.0`；最近发布版本是
+仓库中的未发布源码版本为 `0.12.0`；最近发布版本是
 [`v0.11.0`](https://github.com/Yjjvae/llamacodelab/releases/tag/v0.11.0)。M0–M11 已发布：`ask`
 会临时扫描仓库、检索相关 Chunk，以真实 tokenizer 预算构造防注入 RAG 提示词，并输出带源文件和行号的
 引用；`index` 构建可增量更新的持久化索引；`llcl-server` 提供 HTTP/SSE API。
 
-M12-A 的 CPU/CUDA 容器、Compose、真实模型运行验收和容器检查已在当前分支完成，尚未发布。M12
-仍未整体完成：CI 和基础 Release 流程已经投入使用，但完整交付与安全收尾尚未完成。TUI、VS Code 扩展及
+M12-A 的 CPU/CUDA 容器、Compose、真实模型运行验收和容器检查已经完成，尚未发布。M12
+仍未整体完成：CI 和基础 Release 流程已经投入使用；安装包、容器发布摘要、CHANGELOG 与剩余安全加固
+尚未交付。TUI、VS Code 扩展及
 [Future Plan](docs/FUTURE_PLAN.md) 中的后端加固仍是规划，不属于当前可用功能。
 
 ## Requirements
@@ -23,7 +24,7 @@ M12-A 的 CPU/CUDA 容器、Compose、真实模型运行验收和容器检查已
 - Git（需初始化 `third_party/llama.cpp` 子模块）
 - SQLite 3 开发包（Ubuntu/Debian 为 `libsqlite3-dev`）
 - 标准 preset 使用 Ninja 和 ccache；`*-make` preset 可用 Unix Makefiles 且不要求 ccache
-- GPU 构建：CUDA Toolkit 13.3（Ubuntu 26.04）
+- GPU 源码构建：CUDA Toolkit 13.3（Ubuntu 26.04）；CUDA 容器固定为 13.1.1，以兼容当前 Windows 驱动
 - 可选语义索引：LLVM/Clang 开发包（例如 Ubuntu 的 `llvm-21-dev libclang-21-dev`）
 
 ## Bootstrap
