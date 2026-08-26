@@ -141,6 +141,20 @@ LLCL_TEST_MODEL="$PWD/models/qwen2.5-coder-1.5b-instruct-q4_k_m.gguf" \
   ctest --test-dir build/release-cuda -L model --output-on-failure
 ```
 
+For Dockerfile, Compose, install-rule, server bind, or container configuration changes, validate
+both profiles and BuildKit checks, then build and smoke-test every affected runtime image:
+
+```bash
+./scripts/check_containers.sh
+docker compose --profile cpu build llcl-cpu
+docker compose --profile cpu up --detach llcl-cpu
+./scripts/smoke_test.sh http://127.0.0.1:8080
+```
+
+CUDA image changes additionally require `llcl-cli devices` inside the image and a real
+`--gpus all` server run on an NVIDIA-capable host. Record the pinned base-image digests, runtime
+user, health/readiness result, and persistence evidence in the PR.
+
 For a documentation-only change, run `git diff --check` and verify every new local link. GitHub
 still emits the lightweight `changes` and `required` checks so protected-branch requirements are
 satisfied, but it skips the C++ format, compiler, sanitizer, and clang-tidy matrix.

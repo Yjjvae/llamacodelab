@@ -1,0 +1,30 @@
+{
+  "generation_model": {
+    "path": "/models/generation.gguf",
+    "context_size": 4096,
+    "batch_size": 512,
+    "gpu_layers": 0,
+    "flash_attention": false
+  },
+  "embedding_model": {
+    "path": "/models/embedding.gguf",
+    "context_size": 2048,
+    "batch_size": 512,
+    "gpu_layers": 0,
+    "flash_attention": false
+  },
+  "index": {
+    "data_dir": "/var/lib/llcl/index",
+    "chunk_lines": 80,
+    "overlap_lines": 16,
+    "max_file_bytes": 1048576,
+    "top_k": 8,
+    "hnsw_enabled": false,
+    "hnsw_ef_search": 256,
+    "reranker_enabled": false,
+    "rerank_candidates": 30,
+    "semantic_index_enabled": false,
+    "compilation_database_dir": "build"
+  },
+  "log_level": "info"
+}

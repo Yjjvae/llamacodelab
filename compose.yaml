@@ -1,0 +1,101 @@
+name: llamacodelab
+
+services:
+  llcl-cpu:
+    profiles: [cpu]
+    image: llamacodelab:cpu
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.cpu
+      args:
+        BUILD_JOBS: "${BUILD_JOBS:-8}"
+        LLCL_VERSION: "${LLCL_VERSION:-dev}"
+        LLCL_REVISION: "${LLCL_REVISION:-unknown}"
+    init: true
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${LLCL_PORT:-8080}:8080"
+    volumes:
+      - type: bind
+        source: ./configs/docker.cpu.json
+        target: /config/default.json
+        read_only: true
+      - type: bind
+        source: "${GENERATION_MODEL:-./models/generation.gguf}"
+        target: /models/generation.gguf
+        read_only: true
+      - type: bind
+        source: "${EMBEDDING_MODEL:-./models/embedding.gguf}"
+        target: /models/embedding.gguf
+        read_only: true
+      - type: bind
+        source: "${SOURCE_REPO:-.}"
+        target: /workspace/repo
+        read_only: true
+      - type: volume
+        source: llcl-index
+        target: /var/lib/llcl
+    read_only: true
+    tmpfs:
+      - /tmp:size=256m,mode=1777
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: [CMD, curl, --fail, --silent, --show-error, http://127.0.0.1:8080/healthz]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+
+  llcl-cuda:
+    profiles: [cuda]
+    image: llamacodelab:cuda
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.cuda
+      args:
+        BUILD_JOBS: "${BUILD_JOBS:-8}"
+        CUDA_ARCHITECTURES: "${CUDA_ARCHITECTURES:-89}"
+        LLCL_VERSION: "${LLCL_VERSION:-dev}"
+        LLCL_REVISION: "${LLCL_REVISION:-unknown}"
+    gpus: all
+    init: true
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${LLCL_PORT:-8080}:8080"
+    volumes:
+      - type: bind
+        source: ./configs/docker.cuda.json
+        target: /config/default.json
+        read_only: true
+      - type: bind
+        source: "${GENERATION_MODEL:-./models/generation.gguf}"
+        target: /models/generation.gguf
+        read_only: true
+      - type: bind
+        source: "${EMBEDDING_MODEL:-./models/embedding.gguf}"
+        target: /models/embedding.gguf
+        read_only: true
+      - type: bind
+        source: "${SOURCE_REPO:-.}"
+        target: /workspace/repo
+        read_only: true
+      - type: volume
+        source: llcl-index
+        target: /var/lib/llcl
+    read_only: true
+    tmpfs:
+      - /tmp:size=256m,mode=1777
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: [CMD, curl, --fail, --silent, --show-error, http://127.0.0.1:8080/healthz]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+
+volumes:
+  llcl-index:

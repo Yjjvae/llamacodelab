@@ -1,18 +1,19 @@
 # LlamaCodeLab
 
-一个基于 llama.cpp 的本地 C++ 代码库智能助手。目前交付到 M11：
+一个基于 llama.cpp 的本地 C++ 代码库智能助手。当前已发布到 M11：
 工程骨架、真实 GGUF 的 CPU/CUDA 流式推理、多轮消息、安全的仓库扫描、持久化向量检索、SQLite FTS5/RRF
 混合检索、本地 HTTP/SSE 服务、可选的 Clang AST 语义索引和符号图检索，以及可复现的性能评测。
 
 ## Status
 
-当前发布版本是 [`v0.11.0`](https://github.com/Yjjvae/llamacodelab/releases/tag/v0.11.0)，M0–M11
-已完成。`ask` 会临时扫描仓库、检索相关 Chunk，以真实 tokenizer 预算构造防注入 RAG 提示词，并输出带
-源文件和行号的引用；`index` 构建可增量更新的持久化索引；`llcl-server` 提供 HTTP/SSE API。
+当前开发分支的源码版本为 `0.12.0`；最近发布版本是
+[`v0.11.0`](https://github.com/Yjjvae/llamacodelab/releases/tag/v0.11.0)。M0–M11 已发布：`ask`
+会临时扫描仓库、检索相关 Chunk，以真实 tokenizer 预算构造防注入 RAG 提示词，并输出带源文件和行号的
+引用；`index` 构建可增量更新的持久化索引；`llcl-server` 提供 HTTP/SSE API。
 
-M12 尚未整体完成：GitHub Actions、受保护主干和 Release 流程已经投入使用，但仓库还没有 CPU/CUDA
-Dockerfile、Docker Compose 或容器交付物。TUI、VS Code 扩展以及 [Future Plan](docs/FUTURE_PLAN.md) 中的
-后端加固也仍是规划，不属于当前可用功能。
+M12-A 的 CPU/CUDA 容器、Compose、真实模型运行验收和容器检查已在当前分支完成，尚未发布。M12
+仍未整体完成：CI 和基础 Release 流程已经投入使用，但完整交付与安全收尾尚未完成。TUI、VS Code 扩展及
+[Future Plan](docs/FUTURE_PLAN.md) 中的后端加固仍是规划，不属于当前可用功能。
 
 ## Requirements
 
@@ -127,6 +128,44 @@ cmake --build build/clang
 对 `Foo::bar` 的精确查询会合并定义及一跳调用/继承关系；解析失败的翻译单元自动回退为文本切块，
 不会中断整个索引。
 
+## Containers
+
+容器镜像不包含模型、索引或待分析仓库。先复制环境模板并填写真实路径：
+
+```bash
+cp .env.example .env
+```
+
+CPU 服务：
+
+```bash
+docker compose --profile cpu build llcl-cpu
+docker compose --profile cpu up --detach llcl-cpu
+./scripts/smoke_test.sh http://127.0.0.1:8080
+```
+
+CUDA 服务需要 NVIDIA Container Toolkit 或 Docker Desktop 的 GPU 支持。先验证 GPU 透传，再启动服务：
+
+```bash
+docker run --rm --gpus all \
+  nvidia/cuda:13.1.1-base-ubuntu24.04@sha256:e8c8679ccd042249d4c4080a3fab5a6bb52ab6e771addffa2e6e4eafea797bd2 \
+  nvidia-smi
+
+docker compose --profile cuda build llcl-cuda
+docker compose --profile cuda up --detach llcl-cuda
+./scripts/smoke_test.sh http://127.0.0.1:8080
+```
+
+Compose 只把端口发布到宿主的 `127.0.0.1`，模型和源码只读挂载，索引保存在命名卷
+`llamacodelab_llcl-index`。`docker compose --profile cpu down` 或 CUDA 对应命令会删除容器但保留索引卷；
+只有显式增加 `--volumes` 才会清空它。两个 profile 共用端口和索引卷，不应同时启动。
+
+基础镜像、Dockerfile frontend 和 CUDA tag 均固定到 digest。修改容器文件后先运行：
+
+```bash
+./scripts/check_containers.sh
+```
+
 ## Verification
 
 ```bash
@@ -178,7 +217,7 @@ cmake --build build/bench --target llcl_retrieval_benchmark
 
 ## Documentation
 
-- [完整实现教程](docs/IMPLEMENTATION_GUIDE.md)：M0–M12 的目标路线和教学示例，不代表每一节都已落地。
+- [完整实现教程](docs/IMPLEMENTATION_GUIDE.md)：M0–M12 的实现路线、设计取舍和验收方法。
 - [开发工作日志](WORKLOG.md)：当前交付状态、验证证据、历史记录和已知限制。
 - [TUI 工作台规划](docs/tui-plan.md)：尚未实现的终端客户端设计。
 - [前后端 Future Plan](docs/FUTURE_PLAN.md)：M0–M12 编号之外的后续架构工作。

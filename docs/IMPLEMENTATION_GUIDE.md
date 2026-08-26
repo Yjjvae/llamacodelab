@@ -1047,6 +1047,7 @@ PR 合并不等于发布。文档、CI 和内部维护通常只做 squash merge�
 | `v0.9.0`  | HNSW、混合检索与 Rerank         |
 | `v0.10.0` | Clang AST 语义索引              |
 | `v0.11.0` | 可复现评测与性能流程            |
+| `v0.12.0` | CPU/CUDA 容器与 Compose（开发中） |
 
 M12 完成前不预先声明 `v1.0.0`；发布版本由实际交付内容和兼容性决定。
 
@@ -3465,8 +3466,9 @@ TEST(AskService, PropagatesCancellationToGenerator)
 
 ## 23. M12-A：Docker 容器化
 
-> 本节描述 M12-A 的计划实现和验收，不代表仓库当前已有这些 Docker 文件。实际交付状态以
-> [README](../README.md#status) 和 [Worklog](../WORKLOG.md#当前状态) 为准。
+> M12-A 的实现与真实 CPU/CUDA 运行验收已在当前开发分支完成。可执行内容以仓库中的
+> [CPU Dockerfile](../docker/Dockerfile.cpu)、[CUDA Dockerfile](../docker/Dockerfile.cuda) 和
+> [Compose](../compose.yaml) 为准；发布状态以 [Worklog](../WORKLOG.md#当前状态) 为准。
 
 ### 23.1 目标
 
@@ -3483,222 +3485,89 @@ TEST(AskService, PropagatesCancellationToGenerator)
 
 ### 23.3 `.dockerignore`
 
-```dockerignore
-.git
-.github
-build
-build-*
-models/*.gguf
-var
-indexes
-.cache
-.ccache
-.env
-*.log
-```
+实际 [.dockerignore](../.dockerignore) 排除 Git/Codex 元数据、所有本地 build、GGUF、索引、缓存、日志和
+`.env`。它保留 `.env.example`、源码及已经初始化的 `third_party/llama.cpp` 内容。构建日志中的 context
+传输量应远小于本地模型大小；如果接近 GGUF 的 GiB 体积，应先停止并检查 ignore 规则。
 
 ### 23.4 CPU 多阶段镜像
 
-`docker/Dockerfile.cpu`：
+[CPU Dockerfile](../docker/Dockerfile.cpu) 使用固定 digest 的 Ubuntu 26.04 多阶段构建：
 
-```dockerfile
-# syntax=docker/dockerfile:1
+- builder 安装 GCC、CMake、Ninja 和 SQLite headers，关闭测试、动态库、host-native 指令集和 ccache；
+- `cmake --install` 验证项目安装规则，runtime 只从安装结果复制 `bin/`，不复制 headers、源码或编译器；
+- runtime 只安装 curl、SQLite、OpenMP 和 C++ 运行库，并固定使用 UID/GID `10001`；
+- [包安装器](../docker/install-packages.sh) 在官方镜像源短暂返回 5xx 时有限重试并复用已下载归档；
+- [entrypoint](../docker/entrypoint.sh) 默认启动 server，也允许直接运行 `llcl-cli devices` 等子命令。
 
-ARG UBUNTU_VERSION=26.04
-
-FROM ubuntu:${UBUNTU_VERSION} AS build
-
-ENV DEBIAN_FRONTEND=noninteractive
-
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
-       build-essential \
-       ca-certificates \
-       ccache \
-       cmake \
-       git \
-       ninja-build \
-       libsqlite3-dev \
-    && rm -rf /var/lib/apt/lists/*
-
-WORKDIR /src
-COPY . .
-
-RUN cmake --preset release-cpu \
-    && cmake --build --preset release-cpu \
-    && cmake --install build/release-cpu --prefix /opt/llcl
-
-FROM ubuntu:${UBUNTU_VERSION} AS runtime
-
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
-       ca-certificates \
-       curl \
-       libgomp1 \
-       libsqlite3-0 \
-    && rm -rf /var/lib/apt/lists/* \
-    && useradd --create-home --uid 10001 llcl
-
-COPY --from=build /opt/llcl /opt/llcl
-
-USER llcl
-WORKDIR /app
-
-EXPOSE 8080
-
-ENTRYPOINT ["/opt/llcl/bin/llcl-server"]
-CMD ["--config", "/config/default.json"]
-```
-
-要让这个 Dockerfile 生效，CMake 需要为自己的 targets 增加 `install(TARGETS ...)`。
+应用的两个 CMake target 都有 `install(TARGETS ... RUNTIME DESTINATION bin)` 规则。容器构建显式使用
+`BUILD_SHARED_LIBS=OFF`，因此 final stage 不需要从 builder 猜测 llama.cpp 的共享库及 RPATH。
 
 ### 23.5 CUDA 镜像
 
-使用与宿主驱动兼容的 NVIDIA CUDA `devel` 镜像构建，再用同系列 `runtime` 镜像运行。不要把下面占位符当作永远有效的 tag：
+[CUDA Dockerfile](../docker/Dockerfile.cuda) 使用 CUDA 13.1.1 的 Ubuntu 24.04 `devel` builder 和同系列
+`runtime` final stage。两者分别固定 manifest-list digest，不使用 `latest`；默认
+`CMAKE_CUDA_ARCHITECTURES=89` 对应 RTX 4060 Laptop，可通过 build arg 为另一台受支持 GPU 修改。
 
-```dockerfile
-# syntax=docker/dockerfile:1
-
-ARG CUDA_IMAGE_TAG=<PINNED_CUDA_TAG>
-
-FROM nvidia/cuda:${CUDA_IMAGE_TAG}-devel-ubuntu24.04 AS build
-
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
-       build-essential \
-       ca-certificates \
-       cmake \
-       git \
-       ninja-build \
-       libsqlite3-dev \
-    && rm -rf /var/lib/apt/lists/*
-
-WORKDIR /src
-COPY . .
-
-RUN cmake -S . -B build \
-      -G Ninja \
-      -DCMAKE_BUILD_TYPE=Release \
-      -DLLCL_ENABLE_CUDA=ON \
-      -DCMAKE_CUDA_ARCHITECTURES=89 \
-    && cmake --build build -j 8 \
-    && cmake --install build --prefix /opt/llcl
-
-FROM nvidia/cuda:${CUDA_IMAGE_TAG}-runtime-ubuntu24.04 AS runtime
-
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
-       curl \
-       libgomp1 \
-       libsqlite3-0 \
-    && rm -rf /var/lib/apt/lists/* \
-    && useradd --create-home --uid 10001 llcl
-
-COPY --from=build /opt/llcl /opt/llcl
-
-USER llcl
-WORKDIR /app
-EXPOSE 8080
-
-ENTRYPOINT ["/opt/llcl/bin/llcl-server"]
-CMD ["--config", "/config/default.json"]
-```
-
-选择实际 CUDA tag 时：
-
-- 查询 NVIDIA 官方可用 tag。
-- 固定完整 tag，不使用 `latest`。
-- 记录镜像 digest。
-- 在 CI 中构建验证。
+宿主只需要兼容的 NVIDIA 驱动和 NVIDIA Container Toolkit/Docker Desktop GPU 支持，不在容器或 WSL
+安装 Linux kernel driver。容器使用 13.1.1 是为了兼容当前声明 CUDA 13.1 能力的 Windows 驱动；本机
+Ubuntu 26.04 源码构建仍按 M2 使用 CUDA Toolkit 13.3。最终镜像继承 CUDA runtime，但不包含 nvcc、
+编译器和 CUDA devel headers。
 
 ### 23.6 `compose.yaml`
 
-```yaml
-services:
-  llcl:
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.cuda
-      args:
-        CUDA_IMAGE_TAG: "${CUDA_IMAGE_TAG}"
-    ports:
-      - "127.0.0.1:8080:8080"
-    volumes:
-      - type: bind
-        source: ./configs
-        target: /config
-        read_only: true
-      - type: bind
-        source: ./models
-        target: /models
-        read_only: true
-      - type: bind
-        source: ./var
-        target: /var/lib/llcl
-      - type: bind
-        source: "${SOURCE_REPO}"
-        target: /workspace/repo
-        read_only: true
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
-    environment:
-      LLCL_CONFIG: /config/default.json
-      LLCL_SERVER_HOST: 0.0.0.0
-      LLCL_GENERATION_MODEL_PATH: /models/generation.gguf
-      LLCL_EMBEDDING_MODEL_PATH: /models/embedding.gguf
-      LLCL_INDEX_DATA_DIR: /var/lib/llcl/index
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "--fail", "http://127.0.0.1:8080/healthz"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 60s
-```
+实际 [Compose 文件](../compose.yaml) 用 `cpu` 和 `cuda` profiles 隔离两个服务；二者共享端口约定和命名
+索引卷，但不会默认同时启动。CUDA service 使用 `gpus: all` 请求 GPU。配置、两个模型文件和源码仓库分别
+只读 bind mount；`llamacodelab_llcl-index` 是唯一持久写入位置。
 
-`.env.example`：
+[`.env.example`](../.env.example)：
 
 ```dotenv
-CUDA_IMAGE_TAG=<PINNED_CUDA_TAG>
-SOURCE_REPO=/absolute/path/to/cpp/repository
+SOURCE_REPO=.
+GENERATION_MODEL=./models/qwen2.5-coder-1.5b-instruct-q4_k_m.gguf
+EMBEDDING_MODEL=./models/nomic-embed-text-v1.5-q4_k_m.gguf
+LLCL_PORT=8080
+BUILD_JOBS=8
+CUDA_ARCHITECTURES=89
 ```
 
-真实 `.env` 不提交。
+真实 `.env` 不提交。推荐对仓库外的 bind source 使用绝对路径。
 
 ### 23.7 Docker 验证
 
-先验证 Docker GPU：
+先验证 manifests 和 Dockerfile frontend：
 
 ```bash
-docker run --rm --gpus all \
-  nvidia/cuda:<PINNED_CUDA_TAG>-base-ubuntu24.04 \
-  nvidia-smi
+./scripts/check_containers.sh
 ```
 
-再运行：
+CPU profile：
 
 ```bash
 cp .env.example .env
-# 编辑 .env
-docker compose build
-docker compose up
+# 检查模型与 SOURCE_REPO 路径
+docker compose --profile cpu build llcl-cpu
+docker compose --profile cpu up --detach llcl-cpu
+./scripts/smoke_test.sh http://127.0.0.1:8080
 ```
 
-冒烟测试：
+CUDA profile 先验证 Docker GPU：
 
 ```bash
-curl --fail http://127.0.0.1:8080/healthz
-curl --fail http://127.0.0.1:8080/readyz
+docker run --rm --gpus all \
+  nvidia/cuda:13.1.1-base-ubuntu24.04@sha256:e8c8679ccd042249d4c4080a3fab5a6bb52ab6e771addffa2e6e4eafea797bd2 \
+  nvidia-smi
+
+docker compose --profile cuda build llcl-cuda
+docker compose --profile cuda up --detach llcl-cuda
+./scripts/smoke_test.sh http://127.0.0.1:8080
 ```
+
+启动前 `/healthz` 不可达；模型加载和首次索引完成后，容器 healthcheck、`/healthz`、`/readyz` 和
+`/v1/models` 均应成功。删除并重建 service 后检查 `/var/lib/llcl/index` 仍存在，证明命名卷未丢失。
 
 ### 23.8 容器安全
 
-完成基础功能后增加：
+实际 Compose 已启用：
 
 ```yaml
     read_only: true

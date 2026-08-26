@@ -26,11 +26,13 @@ int main(int argc, char** argv) {
   CLI::App app{"LlamaCodeLab HTTP/SSE server", "llcl-server"};
   std::string config_path = "configs/default.json";
   std::string repository;
+  std::string host = "127.0.0.1";
   int port = 8080;
   app.add_option("--config", config_path, "JSON configuration file")->check(CLI::ExistingFile);
   app.add_option("--repo", repository, "Repository root to index and serve")
       ->required()
       ->check(CLI::ExistingDirectory);
+  app.add_option("--host", host, "IPv4 address to bind (use 0.0.0.0 inside a container)");
   app.add_option("--port", port, "TCP port")->check(CLI::Range(1, 65535));
   CLI11_PARSE(app, argc, argv);
 
@@ -104,8 +106,8 @@ int main(int argc, char** argv) {
       };
     }();
     llcl::http_adapter::HttpServer server(ask, generation_queue);
-    std::cout << "llcl-server listening on http://127.0.0.1:" << port << '\n';
-    return server.listen("127.0.0.1", port) ? 0 : 1;
+    std::cout << "llcl-server listening on http://" << host << ':' << port << '\n';
+    return server.listen(host, port) ? 0 : 1;
   } catch (const std::exception& exception) {
     std::cerr << "error: " << exception.what() << '\n';
     return 1;
