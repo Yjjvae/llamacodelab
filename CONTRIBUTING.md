@@ -145,6 +145,24 @@ For a documentation-only change, run `git diff --check` and verify every new loc
 still emits the lightweight `changes` and `required` checks so protected-branch requirements are
 satisfied, but it skips the C++ format, compiler, sanitizer, and clang-tidy matrix.
 
+## Documentation maintenance
+
+Keep each document responsible for one kind of truth so status does not drift:
+
+- `README.md` is the user-facing source for the current release, available capabilities, setup,
+  usage, and major missing features.
+- the top of `WORKLOG.md` is the mutable delivery snapshot; dated records below it are append-only
+  history and should not be rewritten merely because the project moved on.
+- `docs/IMPLEMENTATION_GUIDE.md` is the target tutorial. Planned files and commands must not be
+  presented as current repository contents.
+- `docs/FUTURE_PLAN.md` and `docs/tui-plan.md` describe unimplemented work until the corresponding
+  code and verification are merged.
+
+When a PR changes delivery status, update the README and Worklog in the same PR. Remove superseded
+placeholders and mutable “next step”, “pending CI”, branch, or release claims once they stop being
+true; preserve durable evidence in a dated Worklog entry or ADR. Before merging a documentation PR,
+search for contradictory copies of the changed version, milestone, capability, and limitation.
+
 ## Pull Requests
 
 Open an incomplete change as Draft. Mark it Ready only when its scope is complete, its branch is

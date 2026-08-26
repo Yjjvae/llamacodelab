@@ -12,7 +12,7 @@ FTS5/BM25 候选通过 RRF 融合。“谁调用”类查询沿 `calls` 入边�
 
 ## 后果
 
-默认构建不需要 LLVM/Clang，现有 CPU、CUDA、Docker 和 CI 路径保持可用。开启语义模式需要目标仓库提供
+默认构建不需要 LLVM/Clang，现有 CPU、CUDA 和 CI 路径保持可用。开启语义模式需要目标仓库提供
 正确的编译数据库，因此生成文件、平台宏或外部 SDK 缺失仍可能触发单文件 fallback。符号 Chunk id 与符号 id
 一致，使图检索结果可直接由既有 Chunk repository 获取源码和引用。
 
