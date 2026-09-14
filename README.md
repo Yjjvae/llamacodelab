@@ -1,19 +1,20 @@
 # LlamaCodeLab
 
-一个基于 llama.cpp 的本地 C++ 代码库智能助手。当前已发布到 M11：
+一个基于 llama.cpp 的本地 C++ 代码库智能助手。当前已发布到 M12-A：
 工程骨架、真实 GGUF 的 CPU/CUDA 流式推理、多轮消息、安全的仓库扫描、持久化向量检索、SQLite FTS5/RRF
-混合检索、本地 HTTP/SSE 服务、可选的 Clang AST 语义索引和符号图检索，以及可复现的性能评测。
+混合检索、本地 HTTP/SSE 服务、可选的 Clang AST 语义索引和符号图检索、可复现的性能评测，以及 CPU/CUDA
+容器运行环境。
 
 ## Status
 
-仓库中的未发布源码版本为 `0.12.0`；最近发布版本是
-[`v0.11.0`](https://github.com/Yjjvae/llamacodelab/releases/tag/v0.11.0)。M0–M11 已发布：`ask`
+当前源码和最近发布版本均为
+[`v0.12.0`](https://github.com/Yjjvae/llamacodelab/releases/tag/v0.12.0)。M0–M12-A 已发布：`ask`
 会临时扫描仓库、检索相关 Chunk，以真实 tokenizer 预算构造防注入 RAG 提示词，并输出带源文件和行号的
 引用；`index` 构建可增量更新的持久化索引；`llcl-server` 提供 HTTP/SSE API。
 
-M12-A 的 CPU/CUDA 容器、Compose、真实模型运行验收和容器检查已经完成，尚未发布。M12
-仍未整体完成：CI 和基础 Release 流程已经投入使用；安装包、容器发布摘要、CHANGELOG 与剩余安全加固
-尚未交付。TUI、VS Code 扩展及
+M12-A 的 CPU/CUDA 容器、Compose、真实模型运行验收和容器检查已随 `v0.12.0` 发布。M12
+仍未整体完成：CI、CHANGELOG 和基础 Release 流程已经投入使用；预构建安装包、registry 镜像与剩余安全
+加固尚未交付。TUI、VS Code 扩展及
 [Future Plan](docs/FUTURE_PLAN.md) 中的后端加固仍是规划，不属于当前可用功能。
 
 ## Requirements
@@ -219,6 +220,7 @@ cmake --build build/bench --target llcl_retrieval_benchmark
 ## Documentation
 
 - [完整实现教程](docs/IMPLEMENTATION_GUIDE.md)：M0–M12 的实现路线、设计取舍和验收方法。
+- [版本变更记录](CHANGELOG.md)：从 `v0.12.0` 开始维护的用户可见变化与兼容性说明。
 - [开发工作日志](WORKLOG.md)：当前交付状态、验证证据、历史记录和已知限制。
 - [TUI 工作台规划](docs/tui-plan.md)：尚未实现的终端客户端设计。
 - [前后端 Future Plan](docs/FUTURE_PLAN.md)：M0–M12 编号之外的后续架构工作。

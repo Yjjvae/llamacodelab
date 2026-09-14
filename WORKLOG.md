@@ -5,11 +5,11 @@
 
 ## 当前状态
 
-- 日期：2026-08-26（Asia/Shanghai）
-- 已发布进度：M0–M11；M12 尚未整体完成
-- 开发分支版本：`0.12.0`
-- 最近发布版本：[`v0.11.0`](https://github.com/Yjjvae/llamacodelab/releases/tag/v0.11.0)
-- 未发布变更：M12-A 容器实现及真实 CPU/CUDA 运行验收已完成
+- 日期：2026-09-14（Asia/Shanghai）
+- 已发布进度：M0–M12-A；M12 尚未整体完成
+- 当前源码版本：`0.12.0`
+- 最近发布版本：[`v0.12.0`](https://github.com/Yjjvae/llamacodelab/releases/tag/v0.12.0)
+- 未发布变更：无
 - Git：`main` 受保护；变更通过聚焦分支和 PR 合并，普通合并不自动创建版本
 
 | 里程碑 | 状态 | 可验证结果 |
@@ -31,7 +31,7 @@
 | M11 评测与性能 | 完成 | 固定 seed 基准、检索指标、环境快照、报告模板与 CPU/CUDA 对比流程 |
 | M12-A Docker | 完成 | CPU/CUDA 多阶段镜像、Compose、真实模型/GPU、持久化、安全策略和静态检查通过 |
 | M12-B CI | 已投入使用 | 文档轻量检查、代码完整矩阵和受保护主干的 `required` 聚合门禁 |
-| M12-C Release | 部分完成 | Tag/Release 流程已使用；CHANGELOG、安装包、容器摘要和 `v0.12.0` 发布仍未完成 |
+| M12-C Release | 部分完成 | `v0.12.0` 源码/Compose 与 CHANGELOG 已发布；预构建安装包和 registry 镜像仍未提供 |
 
 ## 里程碑实现记录
 
@@ -335,7 +335,7 @@ LLCL_TEST_GPU_LAYERS=-1 LLCL_TEST_REPEAT=20 \
 3. 索引代际一致性、embedding 模型真实 SHA-256 和 SSE 跨线程输出仍需按
    [Future Plan](docs/FUTURE_PLAN.md) 的 P0 项加固。
 4. TUI 和 VS Code 扩展尚未实现；当前用户入口只有 CLI 与 HTTP/SSE。
-5. M12-A 容器实现已验收但尚未发布；M12 的 CHANGELOG、安装包、容器发布摘要和完整交付仍未完成。
+5. `v0.12.0` 发布可复现 Dockerfile 与 Compose，但尚未提供预构建安装包或 registry 镜像。
 6. stop token 在每次 decode 之间检查；一次正在执行的 GPU kernel 不会被强行中断。
 7. 当前只接受 llama.cpp 能识别的 GGUF 模板或其内置模板名称，不执行任意 Jinja。
 8. `nvidia-smi` 在 WSL 中报告整卡占用，包含 Windows 桌面和其他进程，不能当作项目独占显存。
@@ -347,6 +347,14 @@ LLCL_TEST_GPU_LAYERS=-1 LLCL_TEST_REPEAT=20 \
 - 终端客户端的前置条件、边界和验收见 [TUI 工作台规划](docs/tui-plan.md)。
 
 ## 日期记录
+
+### 2026-09-14 — v0.12.0 容器化发布
+
+- PR #26 通过容器 manifest、格式、GCC、Clang、ASan/UBSan、clang-tidy 与 `required` 门禁后 squash 合并。
+- 发布 CPU/CUDA 多阶段 Dockerfile、Compose profiles、非 root/只读运行策略、持久化索引卷和 smoke test。
+- 新增顶层 CHANGELOG；README、Worklog 和实现教程同步切换到 `v0.12.0` 已发布状态。
+- 发布物为源码 tag、GitHub 自动源码归档和可复现容器构建定义；不包含模型权重，预构建 registry 镜像与
+  二进制安装包仍未提供。
 
 ### 2026-08-26 — M12-A 容器化与文档状态清理
 

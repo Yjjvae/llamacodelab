@@ -1042,7 +1042,7 @@ PR 合并不等于发布。文档、CI 和内部维护通常只做 squash merge�
 | `v0.9.0`  | HNSW、混合检索与 Rerank         |
 | `v0.10.0` | Clang AST 语义索引              |
 | `v0.11.0` | 可复现评测与性能流程            |
-| `v0.12.0` | CPU/CUDA 容器与 Compose（开发中） |
+| `v0.12.0` | CPU/CUDA 容器与 Compose          |
 
 M12 完成前不预先声明 `v1.0.0`；发布版本由实际交付内容和兼容性决定。
 
@@ -3461,7 +3461,7 @@ TEST(AskService, PropagatesCancellationToGenerator)
 
 ## 23. M12-A：Docker 容器化
 
-> M12-A 的实现与真实 CPU/CUDA 运行验收已经完成，但尚未发布。可执行内容以仓库中的
+> M12-A 的实现与真实 CPU/CUDA 运行验收已随 `v0.12.0` 发布。可执行内容以仓库中的
 > [CPU Dockerfile](../docker/Dockerfile.cpu)、[CUDA Dockerfile](../docker/Dockerfile.cuda) 和
 > [Compose](../compose.yaml) 为准；发布状态以 [Worklog](../WORKLOG.md#当前状态) 为准。
 
@@ -3745,7 +3745,7 @@ M12 的完整发布目标包含：
 - Linux CPU 二进制包。
 - 可选 CUDA 二进制包或镜像。
 - Docker image digest。
-- CHANGELOG；历史版本尚未维护独立文件，M12-C 需补齐后再发布 `v0.12.0`。
+- CHANGELOG；仓库从 `v0.12.0` 开始维护独立文件，更早版本的证据保留在 Worklog 和 GitHub Releases。
 - 兼容的 llama.cpp commit。
 - 支持的配置 schema version。
 - 不包含任何受许可证约束的模型权重。
