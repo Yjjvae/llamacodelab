@@ -2,10 +2,12 @@ cmake_minimum_required(VERSION 3.28)
 
 project(
   LlamaCodeLab
-  VERSION 0.11.0
+  VERSION 0.12.0
   DESCRIPTION "Local C++ codebase assistant powered by llama.cpp"
   LANGUAGES C CXX
 )
+
+include(GNUInstallDirs)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)

@@ -1,0 +1,73 @@
+# syntax=docker/dockerfile:1.18@sha256:dabfc0969b935b2080555ace70ee69a5261af8a8f1b4df97b9e7fbcf6722eddf
+
+ARG CUDA_DEVEL_IMAGE=nvidia/cuda:13.1.1-devel-ubuntu24.04@sha256:9cf8694a27722418a1f175d90f85d5afb5a728fd4a9907d7f0565efecfa14d32
+ARG CUDA_RUNTIME_IMAGE=nvidia/cuda:13.1.1-runtime-ubuntu24.04@sha256:12e26235ebe186000d71f8e457a9ad2aed6c0cb743a7935f0443bacef206aa34
+
+FROM ${CUDA_DEVEL_IMAGE} AS build
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+COPY --chmod=0755 docker/install-packages.sh /usr/local/bin/install-packages
+RUN install-packages \
+    build-essential \
+    ca-certificates \
+    cmake \
+    libsqlite3-dev \
+    ninja-build
+
+WORKDIR /src
+COPY . .
+
+ARG BUILD_JOBS=8
+ARG CUDA_ARCHITECTURES=89
+RUN cmake -S . -B build/container -G Ninja \
+      -DCMAKE_BUILD_TYPE=Release \
+      -DCMAKE_CUDA_ARCHITECTURES="${CUDA_ARCHITECTURES}" \
+      -DCMAKE_CUDA_COMPILER=/usr/local/cuda/bin/nvcc \
+      -DBUILD_SHARED_LIBS=OFF \
+      -DGGML_CCACHE=OFF \
+      -DGGML_NATIVE=OFF \
+      -DLLCL_BUILD_MODEL_TESTS=OFF \
+      -DLLCL_BUILD_TESTS=OFF \
+      -DLLCL_ENABLE_CUDA=ON \
+    && cmake --build build/container --parallel "${BUILD_JOBS}" \
+    && cmake --install build/container --prefix /opt/llcl
+
+FROM ${CUDA_RUNTIME_IMAGE} AS runtime
+
+ARG LLCL_VERSION=dev
+ARG LLCL_REVISION=unknown
+LABEL org.opencontainers.image.title="LlamaCodeLab" \
+      org.opencontainers.image.description="Local C++ codebase assistant powered by llama.cpp (CUDA)" \
+      org.opencontainers.image.source="https://github.com/Yjjvae/llamacodelab" \
+      org.opencontainers.image.version="${LLCL_VERSION}" \
+      org.opencontainers.image.revision="${LLCL_REVISION}"
+
+COPY --chmod=0755 docker/install-packages.sh /usr/local/bin/install-packages
+RUN install-packages \
+      ca-certificates \
+      curl \
+      libgomp1 \
+      libsqlite3-0 \
+      libstdc++6 \
+    && rm -f /usr/local/bin/install-packages \
+    && groupadd --gid 10001 llcl \
+    && useradd --uid 10001 --gid 10001 --create-home --shell /usr/sbin/nologin llcl \
+    && install --directory --owner 10001 --group 10001 \
+      /config /models /workspace/repo /var/lib/llcl
+
+COPY --from=build /opt/llcl/bin/ /opt/llcl/bin/
+COPY --chmod=0755 docker/entrypoint.sh /usr/local/bin/llcl-entrypoint
+
+ENV PATH="/opt/llcl/bin:${PATH}"
+USER 10001:10001
+WORKDIR /workspace
+
+EXPOSE 8080
+VOLUME ["/var/lib/llcl"]
+STOPSIGNAL SIGTERM
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
+  CMD curl --fail --silent --show-error http://127.0.0.1:8080/healthz || exit 1
+
+ENTRYPOINT ["llcl-entrypoint"]
+CMD ["--host", "0.0.0.0", "--port", "8080", "--config", "/config/default.json", "--repo", "/workspace/repo"]

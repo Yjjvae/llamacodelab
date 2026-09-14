@@ -59,6 +59,10 @@ jobs:
           echo "code=$code" >> "$GITHUB_OUTPUT"
           echo "C++ quality matrix required: $code" >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Validate container manifests
+        if: steps.scope.outputs.code == 'true'
+        run: ./scripts/check_containers.sh
+
   format:
     name: format
     needs: changes

@@ -15,3 +15,5 @@ target_link_libraries(
 
 llcl_set_project_warnings(llcl-cli)
 llcl_enable_sanitizers(llcl-cli)
+
+install(TARGETS llcl-cli RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
